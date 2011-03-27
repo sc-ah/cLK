@@ -40,7 +40,7 @@ static struct ptentry board_part_list[MAX_PTABLE_PARTS] __attribute__ ((aligned 
 				.length = SYSTEM_PARTITION_SIZE /* In MB */,
 		},
 		{
-				.length = 44 /* In MB */,
+				.length = CACHE_PARTITION_SIZE /* In MB */,
 				.name = "cache",
 		},
 		{
