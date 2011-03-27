@@ -1,0 +1,19 @@
+#!/bin/bash
+
+version=1.4
+SIZES="100 150 200 210 250 300 350 400"
+cache=5
+
+for size in $SIZES
+do
+sed -i s/DEFINES\ +=\ SYSTEM_PARTITION_SIZE=.*/DEFINES\ +=\ SYSTEM_PARTITION_SIZE=${size}/ lk/target/htcleo/rules.mk
+sed -i s/DEFINES\ +=\ CACHE_PARTITION_SIZE=.*/DEFINES\ +=\ CACHE_PARTITION_SIZE=${cache}/ lk/target/htcleo/rules.mk
+sed -i s/system\ .*/system\ ${size}M/ build-stuff/readme.txt
+./compile-arif clean
+pushd build-stuff
+rm -rf ../../cLK-out/cLK${version}_system_${size}M_arif-ali.zip
+cp ../bin/RUU_signed.nbh .
+zip -9Dr ../../cLK-out/cLK${version}_system_${size}M_arif-ali.zip readme.txt CustomRUU.exe RUU_signed.nbh
+rm -rf RUU_signed.nbh
+popd
+done
