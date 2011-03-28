@@ -1,19 +1,24 @@
 #!/bin/bash
 
-version=1.4
-SIZES="100 150 200 210 250 300 350 400"
-cache=5
+export ARM=$HOME/android/HD2/android/toolchain/arm-2009q3/bin
+export WINE=/opt/cxoffice/bin
+export PATH=$ARM:$WINE:$PATH
+export VERSION=1.4
+export SIZES="100 150 200 210 250 300 350 400"
+export CACHE=5
+
+make clean
 
 for size in $SIZES
 do
 sed -i s/DEFINES\ +=\ SYSTEM_PARTITION_SIZE=.*/DEFINES\ +=\ SYSTEM_PARTITION_SIZE=${size}/ lk/target/htcleo/rules.mk
-sed -i s/DEFINES\ +=\ CACHE_PARTITION_SIZE=.*/DEFINES\ +=\ CACHE_PARTITION_SIZE=${cache}/ lk/target/htcleo/rules.mk
+sed -i s/DEFINES\ +=\ CACHE_PARTITION_SIZE=.*/DEFINES\ +=\ CACHE_PARTITION_SIZE=${CACHE}/ lk/target/htcleo/rules.mk
 sed -i s/system\ .*/system\ ${size}M/ build-stuff/readme.txt
-./compile-arif clean
+make partition
 pushd build-stuff
-rm -rf ../../cLK-out/cLK${version}_system_${size}M_arif-ali.zip
-cp ../bin/RUU_signed.nbh .
-zip -9Dr ../../cLK-out/cLK${version}_system_${size}M_arif-ali.zip readme.txt CustomRUU.exe RUU_signed.nbh
-rm -rf RUU_signed.nbh
+rm -rf ../../cLK-out/cLK${VERSION}_system_${size}M_arif-ali.zip
+mv ../bin/RUU_signed.nbh .
+zip -9Dr ../../cLK-out/cLK${VERSION}_system_${size}M_arif-ali.zip readme.txt CustomRUU.exe RUU_signed.nbh
 popd
+rm -rf RUU_signed.nbh
 done
