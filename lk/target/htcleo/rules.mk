@@ -7,7 +7,7 @@ PLATFORM := qsd8k
 #define system partition size (in MB), if not defined my custom (from magldr) layout is used. see init.c
 DEFINES += SYSTEM_PARTITION_SIZE=400
 #DEFINES += SYSTEM_PARTITION_SIZE=400
-DEFINES += CACHE_PARTITION_SIZE=5
+DEFINES += CACHE_PARTITION_SIZE=44
 
 #cedesmith note: MEMBASE requires edit in platform/qsd8k/rules.mk
 # maximum partition size will be about 340mb ( MEMBASE-SCRATCH_ADDR)

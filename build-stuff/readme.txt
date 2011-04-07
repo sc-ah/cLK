@@ -8,7 +8,7 @@ misc 1M
 recovery 5M
 boot 8M
 system 400M
-cache 5M
+cache 44M
 userdata remaining
 
 Thanks and credits
