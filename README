@@ -1,0 +1,93 @@
+=================
+cLK  by cedesmith
+=================
+URL: http://forum.xda-developers.com/showthread.php?t=901305
+
+1. Disclaimer
+2. FAQ
+3. How To
+  3.1. Flash cLK
+  3.2. Compiling cLK
+4. Known Issues
+5. Credits
+
+================
+1. DISCLAIMER
+================
+
+This comes with no warranties, if you use it you do it on your own risk.
+Please read carefully the flowing information and make sure you know what you are doing.
+I don't have time or patience for questions and support. If you use it you are on your own (well and this community).
+
+================
+2. FAQ
+================
+
+Q&A
+Q: What it is ?
+A: A bootloader for android like magldr.
+
+Q: Is it better then magldr ?
+A1: NO, it is missing tetris .
+A2: NO, magldr has some nice features like partitioning and rmnet.
+
+Q: Can i use last 24MB of nand with this?
+A: NO, SPL will erase them. When i have some time i may try to fix it.
+
+Q: Does battery charge with this ?
+A: YES, from version 1.3
+
+Q: Does it boot WP7?
+A: NO. I am only interested in android but in can load and execute any program.
+
+Q: Should i install it ?
+A: If you had to ask probably not. If has no functional benefits over magldr.
+
+=================
+3. How To
+=================
+
+3.1 Flash cLK
+--------------
+
+- make sure you have hspl
+- enter SPL by holding VOL DOWN key while powering/resting the phone.
+- flash with customruu like you would a windows rom and/or magldr
+
+Flash a ROM
+- download android sdk (or rather, just adb, drivers and fastboot)
+- fastboot flash recovery recovery.img
+- after recovery you can reboot and use CWM or you can flash with fastboot 
+  (fastboot flash boot boot.img, fastboot flash system system.img, fastboot flash userdata userdata.img)
+
+Start recovery / fastboot / text console
+- holding down any key ( except power ) will show text console
+- home key will enter recovery ( if flashed )
+- back key will enter fastboot mode
+
+The following URL has a fantastic howto by stirkac
+http://forum.xda-developers.com/showpost.php?p=12327648&postcount=844
+
+3.2 Compiling cLK
+-----------------
+
+Linux: http://forum.xda-developers.com/showpost.php?p=12461912&postcount=934
+
+Windows: http://forum.xda-developers.com/showpost.php?p=12461551&postcount=932
+
+=================
+4. Known issues
+=================
+
+RMNET does not work.
+
+=================
+5. Credits
+=================
+
+- cedesmith for make LK available for the HD2
+- codeaurrora for making LK and for making it open
+- Martin Johnson for his tinboot witch was a great inspiration
+- Martijn Stolk for his kernel segfault solving code and and cotulla for pointing it and his contribution to android on HD2
+- all how worked on making linux kernel possible on hd2
+

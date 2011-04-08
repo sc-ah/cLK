@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export ARM=$HOME/android/HD2/android/toolchain/arm-2009q3/bin
+export ARM=$PWD/../../../toolchain/arm-2009q3/bin
 export PATH=$ARM:$PATH
 export VERSION=1.4
 export SIZES="`echo {80..140..10} {160..400..20}`"
