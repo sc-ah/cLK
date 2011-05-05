@@ -49,7 +49,7 @@
 
 #define EXPAND(NAME) #NAME
 #define TARGET(NAME) EXPAND(NAME)
-#define DEFAULT_CMDLINE "";
+#define DEFAULT_CMDLINE "clk=1.4";
 
 #ifdef MEMBASE
 #define EMMC_BOOT_IMG_HEADER_ADDR (0xFF000+(MEMBASE))
@@ -289,11 +289,12 @@ unified_boot:
 
 	if(hdr->cmdline[0]) {
 		cmdline = (char*) hdr->cmdline;
+		strcat(cmdline," clk=1.4");
 	} else {
 		cmdline = DEFAULT_CMDLINE;
 	}
 	dprintf(INFO, "cmdline = '%s'\n", cmdline);
-
+	
 	dprintf(INFO, "\nBooting Linux\n");
 	boot_linux((void *)hdr->kernel_addr, (void *)TAGS_ADDR,
 		   (const char *)cmdline, board_machtype(),
@@ -381,6 +382,7 @@ continue_boot:
 
 	if(hdr->cmdline[0]) {
 		cmdline = (char*) hdr->cmdline;
+		strcat(cmdline," clk=1.4");
 	} else {
 		cmdline = DEFAULT_CMDLINE;
 	}
