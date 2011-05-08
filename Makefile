@@ -1,5 +1,5 @@
 
-export VERSION=1.4
+export VERSION=1.4.0.1
 export TOOLCHAIN_PREFIX=arm-none-eabi-
 
 default: bin/RUU_signed.nbh
