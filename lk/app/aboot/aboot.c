@@ -46,10 +46,11 @@
 #include "recovery.h"
 #include "bootimg.h"
 #include "fastboot.h"
+#include "version.h"
 
 #define EXPAND(NAME) #NAME
 #define TARGET(NAME) EXPAND(NAME)
-#define DEFAULT_CMDLINE "clk=1.4";
+#define DEFAULT_CMDLINE "";
 
 #ifdef MEMBASE
 #define EMMC_BOOT_IMG_HEADER_ADDR (0xFF000+(MEMBASE))
@@ -289,10 +290,12 @@ unified_boot:
 
 	if(hdr->cmdline[0]) {
 		cmdline = (char*) hdr->cmdline;
-		strcat(cmdline," clk=1.4");
 	} else {
 		cmdline = DEFAULT_CMDLINE;
 	}
+	strcat(cmdline," clk=");
+	strcat(cmdline,cLK_version);
+
 	dprintf(INFO, "cmdline = '%s'\n", cmdline);
 	
 	dprintf(INFO, "\nBooting Linux\n");
@@ -382,10 +385,12 @@ continue_boot:
 
 	if(hdr->cmdline[0]) {
 		cmdline = (char*) hdr->cmdline;
-		strcat(cmdline," clk=1.4");
 	} else {
 		cmdline = DEFAULT_CMDLINE;
 	}
+	strcat(cmdline," clk=");
+	strcat(cmdline,cLK_version);
+
 	dprintf(INFO, "cmdline = '%s'\n", cmdline);
 
 	/* TODO: create/pass atags to kernel */
