@@ -7,8 +7,8 @@ using 2009q3 of Codesourcery Toolchain
 misc 1M
 recovery 5M
 boot 8M
-system 400M
-cache 44M
+system 90M
+cache 5M
 userdata remaining
 
 Thanks and credits

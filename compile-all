@@ -3,7 +3,8 @@
 export ARM=$PWD/../../../toolchain/arm-2009q3/bin
 export PATH=$ARM:$PATH
 export VERSION=1.4.0.1
-export SIZES="`echo {80..150..10} {160..400..20}`"
+#export SIZES="`echo {80..150..10} {160..460..20} 250 350 450`"
+export SIZES="`echo {80..450..10}`"
 export CACHE="5 44"
 export OUTPUT=$PWD/../cLK-out
 export O_ALL=$OUTPUT/allInOne
