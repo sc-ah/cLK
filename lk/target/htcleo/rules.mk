@@ -5,8 +5,7 @@ INCLUDES += -I$(LOCAL_DIR)/include -I$(LK_TOP_DIR)/platform/msm_shared
 PLATFORM := qsd8k
 
 #define system partition size (in MB), if not defined my custom (from magldr) layout is used. see init.c
-DEFINES += SYSTEM_PARTITION_SIZE=90
-#DEFINES += SYSTEM_PARTITION_SIZE=90
+DEFINES += SYSTEM_PARTITION_SIZE=200
 DEFINES += CACHE_PARTITION_SIZE=5
 
 #cedesmith note: MEMBASE requires edit in platform/qsd8k/rules.mk

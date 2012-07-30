@@ -45,7 +45,10 @@ struct fbcon_config {
 	void		(*update_start)(void);
 	int		(*update_done)(void);
 };
-
+void fbcon_set_colors(unsigned bg, unsigned fg);
+void fbcon_set_top_margin(unsigned tm);
+void fbcon_set_bottom_margin(unsigned bm);
+void fbcon_reset(void);
 void fbcon_setup(struct fbcon_config *cfg);
 void fbcon_putc(char c);
 void fbcon_clear(void);

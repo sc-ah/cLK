@@ -18,7 +18,7 @@
 #define LINUX_MACHTYPE  2524
 #define HTCLEO_FLASH_OFFSET	0x219
 
-static struct ptable flash_ptable;
+struct ptable flash_ptable;
 
 // align data on a 512 boundary so will not be interrupted in nbh
 static struct ptentry board_part_list[MAX_PTABLE_PARTS] __attribute__ ((aligned (512))) = {
@@ -150,8 +150,8 @@ void target_init(void)
 }
 void display_lk_version()
 {
-        char *version = "cedesmith's LK (CLK) v";
-        strcat(version,cLK_version);
+    char *version = "cedesmith's LK (CLK) v";
+    strcat(version,CLK_VERSION);
 	strcat(version,"\n");
 	_dputs(version);
 }

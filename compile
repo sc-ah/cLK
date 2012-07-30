@@ -1,6 +1,17 @@
 #!/bin/bash
 
-[ `which arm-none-eabi-gcc` ] && TOOLCHAIN_PREFIX="arm-none-eabi-" || TOOLCHAIN_PREFIX="arm-eabi-"
+export PATH=$PATH:/opt/codesourcery/bin/:/opt/arm-2009q1/bin/
+
+if [ `which arm-none-eabi-gcc` ]; then
+    TOOLCHAIN_PREFIX="arm-none-eabi-" 
+elif [ `which arm-eabi-gcc` ]; then
+    TOOLCHAIN_PREFIX="arm-eabi-"
+elif [ `which arm-none-linux-gnueabi-gcc` ]; then
+    TOOLCHAIN_PREFIX="arm-none-linux-gnueabi-"
+else
+    echo "Cannot find compiler. Exit..."
+    exit 0
+fi
 export TOOLCHAIN_PREFIX
 
 if [ "$1" = "clean" ]; then
@@ -10,10 +21,11 @@ if [ "$1" = "clean" ]; then
 	rm bin/nbgen
 fi
 
-rm bin/lk.bin
-rm bin/os.nb.payload
-rm bin/os.nb
-rm bin/RUU_signed.nbh
+[ -f LEOIMG.nbh ] && rm LEOIMG.nbh
+[ -f bin/lk.bin ] && rm bin/lk.bin
+[ -f bin/os.nb.payload ] && rm bin/os.nb.payload
+[ -f bin/os.nb ] && rm bin/os.nb
+[ -f bin/RUU_signed.nbh ] && rm bin/RUU_signed.nbh
 
 if [ ! -f bin/nbgen ]; then
 	gcc -std=c99 nbgen.c -o bin/nbgen
@@ -28,8 +40,8 @@ cd ..
 cd bin
 chmod +x yang
 ./nbgen os.nb
-./yang -F RUU_signed.nbh -f os.nb -t 0x400 -s 64 -d PB8110000 -c 11111111 -v CLK1.4 -l WWE
+./yang -F RUU_signed.nbh -f os.nb -t 0x400 -s 64 -d PB8110000 -c 11111111 -v CLK1.4.0.2 -l WWE
 cd ..
-
+cp bin/RUU_signed.nbh ./LEOIMG.nbh
 
 

@@ -26,6 +26,9 @@
  * SUCH DAMAGE.
  */
 
+#ifndef _FBCON_FONT5X12_H_
+#define _FBCON_FONT5X12_H_
+
 unsigned font5x12[] = {
     0x00000000, 0x00000000,
     0x08421080, 0x00020084,
@@ -124,3 +127,5 @@ unsigned font5x12[] = {
     0x0004d640, 0x00000000,
     0x00000000, 0x00000000,
 };
+
+#endif /* _FBCON_FONT5X12_H_ */

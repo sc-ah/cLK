@@ -35,6 +35,7 @@
 #include <splash.h>
 
 #include "font5x12.h"
+#include "font8x16.h"
 
 struct pos {
 	int x;
@@ -45,45 +46,67 @@ static struct fbcon_config *config = NULL;
 
 #define RGB565_BLACK		0x0000
 #define RGB565_WHITE		0xffff
+#define RGB565_RED		    0xf800
+#define RGB565_GREEN		0x07e0
+#define RGB565_BLUE		    0x001f
+#define RGB565_YELLOW		0xffe0
+#define RGB565_CYAN		    0x07ff
+#define RGB565_MAGENTA		0xf81f
 
-#define RGB888_BLACK            0x000000
-#define RGB888_WHITE            0xffffff
+#define RGB888_BLACK        0x000000
+#define RGB888_WHITE        0xffffff
 
+#if 0
 #define FONT_WIDTH		5
 #define FONT_HEIGHT		12
+#define FONT_PPCHAR		2
+static unsigned *font = font5x12;
+#else
+#define FONT_WIDTH		8
+#define FONT_HEIGHT		16
+#define FONT_PPCHAR		16
+static unsigned *font = font8x16;
+#endif
 
-static uint16_t			BGCOLOR;
-static uint16_t			FGCOLOR;
+static uint16_t	BGCOLOR;
+static uint16_t	FGCOLOR;
 
-static struct pos		cur_pos;
-static struct pos		max_pos;
+static struct pos cur_pos;
+static struct pos max_pos;
+
+static unsigned top_margin;
+static unsigned bottom_margin;
+
+static unsigned reverse_font8x16(unsigned x)
+{
+	unsigned y = 0;
+	for (uint8_t i = 0; i < 9; ++i) {
+		y <<= 1;
+		y |= (x & 1);
+		x >>= 1;
+	}
+	return y;
+}
 
 static void fbcon_drawglyph(uint16_t *pixels, uint16_t paint, unsigned stride,
 			    unsigned *glyph)
 {
-	unsigned x, y, data;
 	stride -= FONT_WIDTH;
-
-	data = glyph[0];
-	for (y = 0; y < (FONT_HEIGHT / 2); ++y) {
-		for (x = 0; x < FONT_WIDTH; ++x) {
-			if (data & 1)
-				*pixels = paint;
-			data >>= 1;
-			pixels++;
+	for(unsigned i = 0; i < FONT_PPCHAR; i++) {
+		unsigned x, y;
+		unsigned data = glyph[i];
+#if 1
+		data = reverse_font8x16(data);
+#endif
+		for (y = 0; y < (FONT_HEIGHT / FONT_PPCHAR); ++y) {
+			for (x = 0; x < FONT_WIDTH; ++x) {
+				if (data & 1)
+					*pixels = paint;
+				data >>= 1;
+				pixels++;
+			}
+			pixels += stride;
 		}
-		pixels += stride;
-	}
-
-	data = glyph[1];
-	for (y = 0; y < (FONT_HEIGHT / 2); y++) {
-		for (x = 0; x < FONT_WIDTH; x++) {
-			if (data & 1)
-				*pixels = paint;
-			data >>= 1;
-			pixels++;
-		}
-		pixels += stride;
 	}
 }
 
@@ -98,35 +121,54 @@ static void fbcon_flush(void)
 /* TODO: Take stride into account */
 static void fbcon_scroll_up(void)
 {
-	unsigned short *dst = config->base;
+	unsigned bytes_per_bpp = ((config->bpp) / 8);
+	unsigned short *dst = config->base + (config->width * FONT_HEIGHT * (top_margin + 1) * bytes_per_bpp);
 	unsigned short *src = dst + (config->width * FONT_HEIGHT);
+#if 0
 	unsigned count = config->width * (config->height - FONT_HEIGHT);
-
 	while(count--) {
 		*dst++ = *src++;
 	}
-
+#else
+	memcpy(dst, src, config->width * (config->height - FONT_HEIGHT) * bytes_per_bpp);
+#endif
+	/* clear the last line */
+#if 0
 	count = config->width * FONT_HEIGHT;
 	while(count--) {
 		*dst++ = BGCOLOR;
 	}
-
+#else
+	memset(dst, BGCOLOR, config->width * FONT_HEIGHT);
+#endif
 	fbcon_flush();
 }
 
 /* TODO: take stride into account */
 void fbcon_clear(void)
 {
-	unsigned count = config->width * config->height;
-	memset(config->base, BGCOLOR, count * ((config->bpp) / 8));
+	unsigned bytes_per_bpp = ((config->bpp) / 8);
+	unsigned count = config->width * ((config->height - (top_margin + bottom_margin)) * FONT_HEIGHT);
+	memset(config->base + (config->width * FONT_HEIGHT * (top_margin + 1) * bytes_per_bpp), BGCOLOR, count * bytes_per_bpp);
 }
 
+void fbcon_set_top_margin(unsigned tm)
+{
+	top_margin = tm;
+}
 
-static void fbcon_set_colors(unsigned bg, unsigned fg)
+void fbcon_set_bottom_margin(unsigned bm)
+{
+	bottom_margin = bm;
+}
+
+void fbcon_set_colors(unsigned bg, unsigned fg)
 {
 	BGCOLOR = bg;
 	FGCOLOR = fg;
 }
+
+static unsigned putc_sync = 0;
 
 void fbcon_putc(char c)
 {
@@ -141,20 +183,26 @@ void fbcon_putc(char c)
 	if((unsigned char)c < 32) {
 		if(c == '\n')
 			goto newline;
-		else if (c == '\r')
-			cur_pos.x = 0;
 		return;
 	}
+
+	while(putc_sync)
+		thread_sleep(10);
+
+	putc_sync = 1;
 
 	pixels = config->base;
 	pixels += cur_pos.y * FONT_HEIGHT * config->width;
 	pixels += cur_pos.x * (FONT_WIDTH + 1);
+
 	fbcon_drawglyph(pixels, FGCOLOR, config->stride,
-			font5x12 + (c - 32) * 2);
+			font + (c - 32) * FONT_PPCHAR);
 
 	cur_pos.x++;
-	if (cur_pos.x < max_pos.x)
+	if (cur_pos.x < max_pos.x) {
+		putc_sync = 0;
 		return;
+	}
 
 newline:
 	cur_pos.y++;
@@ -164,6 +212,7 @@ newline:
 		fbcon_scroll_up();
 	} else
 		fbcon_flush();
+	putc_sync = 0;
 }
 
 void fbcon_setup(struct fbcon_config *_config)
@@ -177,13 +226,13 @@ void fbcon_setup(struct fbcon_config *_config)
 
 	switch (config->format) {
 	case FB_FORMAT_RGB565:
-		fg = RGB565_WHITE;
-		bg = RGB565_BLACK;
+		fg = RGB565_BLACK;
+		bg = RGB565_WHITE;
 		break;
-        case FB_FORMAT_RGB888:
-                fg = RGB888_WHITE;
-                bg = RGB888_BLACK;
-                break;
+	case FB_FORMAT_RGB888:
+		fg = RGB888_WHITE;
+		bg = RGB888_BLACK;
+		break;
 	default:
 		dprintf(CRITICAL, "unknown framebuffer pixel format\n");
 		ASSERT(0);
@@ -192,13 +241,29 @@ void fbcon_setup(struct fbcon_config *_config)
 
 	fbcon_set_colors(bg, fg);
 
+	fbcon_set_top_margin(0);
+	fbcon_set_bottom_margin(0);
+
 	cur_pos.x = 0;
-	cur_pos.y = 0;
+	cur_pos.y = top_margin + 1;
+
 	max_pos.x = config->width / (FONT_WIDTH+1);
-	max_pos.y = (config->height - 1) / FONT_HEIGHT;
+	max_pos.y = (config->height - 1) / FONT_HEIGHT - bottom_margin;
+
 #if !DISPLAY_SPLASH_SCREEN
 	fbcon_clear();
 #endif
+}
+
+void fbcon_reset(void)
+{
+	fbcon_clear();
+
+	cur_pos.x = 0;
+	cur_pos.y = top_margin + 1;
+
+	max_pos.x = config->width / (FONT_WIDTH+1);
+	max_pos.y = (config->height - 1) / FONT_HEIGHT - bottom_margin;
 }
 
 struct fbcon_config* fbcon_display(void)
@@ -224,7 +289,7 @@ void diplay_image_on_screen(void)
             memcpy (config->base + ((image_base + (i * (config->width))) * bytes_per_bpp),
 		    imageBuffer_rgb888 + (i * SPLASH_IMAGE_HEIGHT * bytes_per_bpp),
 		    SPLASH_IMAGE_HEIGHT * bytes_per_bpp);
-	}
+        }
     }
     fbcon_flush();
     if(is_cmd_mode_enabled())
@@ -238,7 +303,7 @@ void diplay_image_on_screen(void)
             memcpy (config->base + ((image_base + (i * (config->width))) * bytes_per_bpp),
 		    imageBuffer + (i * SPLASH_IMAGE_HEIGHT * bytes_per_bpp),
 		    SPLASH_IMAGE_HEIGHT * bytes_per_bpp);
-	}
+        }
     }
     fbcon_flush();
 #endif
