@@ -57,7 +57,16 @@
 #include "recovery.h"
 #include "version.h"
 
+#define MENU_FONT_8X16
+
 #include "ui_font.h"
+
+#ifdef MENU_FONT_8X16
+#define FONT_WIDTH		8
+#define FONT_HEIGHT		16
+#define FONT_PPCHAR		16
+static unsigned *font = ui_font_8x16;
+#endif
 
 #define FASTBOOT_MODE   0x77665500
 
@@ -70,17 +79,12 @@
 #define RGB565_WHITE		0xffff
 #define RGB565_BLACK		0x0000
 
-#if 0
-#define FONT_WIDTH		5
-#define FONT_HEIGHT		12
-#define FONT_PPCHAR		2
-static unsigned *font = ui_font_5x12;
-#else
-#define FONT_WIDTH		8
-#define FONT_HEIGHT		16
-#define FONT_PPCHAR		16
-static unsigned *font = ui_font_8x16;
-#endif
+#define MENU_REDRAW_ALL		0x00
+#define MENU_HIGHLIGHT_UP 	0x01
+#define MENU_HIGHLIGHT_DOWN  0x02
+
+#define FBCON_FOREGROUND		RGB565_BLACK
+#define FBCON_BACKGROUND		RGB565_WHITE
 
 #define KEY_ERROR 99
 
@@ -96,52 +100,55 @@ uint16_t keys[] = {
 	KEY_HOME
 };
 
-struct menu_item
-{
+#define MENU_START_LINE 	(2)
+
+#ifdef MENU_FONT_8X16
+#define MENU_MAX_HEIGHT 	(11*16)
+#endif
+
+struct menu_item {
 	char menu_title[64];
 	char menu_cmd[64];
 };
 
-#define MAX_MENU_HEIGHT 10
-static unsigned chosen_item = 0;
-static unsigned menu_item_number = 0;
-static unsigned menu_start_lineno = 2;
-
-struct menu_item MENU_ITEMS[] = {
-	{ "  - ANDROID NAND BOOT"  	, "boot_nand" },
-	{ "  - ANDROID SD BOOT"  	, "boot_sbot" },
-	{ "  - RECOVERY"  			, "boot_recv" },
-	{ "  - PARTITION STATS"  	, "prnt_part" },
-	{ "  - CLEAR CONSOLE"  		, "prnt_clrs" },
-	{ "  - REBOOT"  			, "acpu_ggwp" },
-	{ "  - REBOOT BOOTLOADER"	, "acpu_bgwp" },
-	{ "  - POWER OFF"  			, "acpu_pawn" },
+struct menu_item menu_main_items[] = {
+	{ "  - BOOT FROM NAND"  		, "boot_nand" },
+	{ "  - BOOT FROM SD CARD"  		, "boot_sbot" },
+	{ "  - RECOVERY"  				, "boot_recv" },
+	{ "  - PARTITION TABLE"  		, "prnt_part" },
+	{ "  - CLEAR CONSOLE"  			, "prnt_clrs" },
+	{ "  - REBOOT"  				, "acpu_ggwp" },
+	{ "  - REBOOT BOOTLOADER"		, "acpu_bgwp" },
+	{ "  - POWER OFF"  				, "acpu_pawn" },
 };
 
-static uint16_t textcolor 				= RGB565_BLACK;
-static uint16_t backgroundcolor 		= RGB565_WHITE;
-static uint16_t highlightcolor 			= RGB565_GREEN;
-static uint16_t texthightlightcolor 	= RGB565_WHITE;
+static unsigned menu_chosen_item = 0;
+static unsigned menu_item_number = sizeof(menu_main_items)/sizeof(struct menu_item);
 
-int  boot_linux_from_flash(void); // in aboot.c
-void reboot_device(unsigned reboot_reason);  // in init.c
-void shutdown(void); // in proc_comm.c
-void htcleo_ptable_dump(struct ptable *ptable); // in init.c
+static uint16_t text_color 				= RGB565_BLACK;
+static uint16_t background_color 		= RGB565_WHITE;
+static uint16_t highlight_color 		= RGB565_GREEN;
+static uint16_t text_hightlight_color 	= RGB565_WHITE;
+
+extern int  boot_linux_from_flash(void); // in aboot.c
+extern void reboot_device(unsigned reboot_reason);  // in init.c
+extern void shutdown(void); // in proc_comm.c
+extern void htcleo_ptable_dump(struct ptable *ptable); // in init.c
 
 void ui_key_listener_start(void);
 int  ui_key_listener_thread(void *arg);
 void ui_handle_keyup(void);
 void ui_handle_keydown(void);
-void ui_menu_redraw(void);
+void ui_menu_redraw(unsigned mode);
 
 extern unsigned boot_into_sboot; // in aboot.c
 extern struct ptable flash_ptable;  // in init.c
 
 static struct menu_item* ui_get_menu_selection()
 {
-	if (chosen_item >= menu_item_number)
+	if (menu_chosen_item >= menu_item_number)
 		return NULL;
-	return (&MENU_ITEMS[chosen_item]);
+	return (&menu_main_items[menu_chosen_item]);
 }
 
 static void ui_handle_command(void)
@@ -202,12 +209,12 @@ void ui_menu_clear(void)
 {
 	struct fbcon_config* fbconfig = fbcon_display();
 	unsigned bytes_per_bpp = ((fbconfig->bpp) / 8);
-	unsigned count = fbconfig->width * MAX_MENU_HEIGHT;
+	unsigned count = fbconfig->width * MENU_MAX_HEIGHT;
 
-	memset(fbconfig->base, backgroundcolor, count * bytes_per_bpp);
+	memset(fbconfig->base, background_color, count * bytes_per_bpp);
 }
-#if 1
-static unsigned reverse_font_8x16(unsigned x)
+
+static unsigned reverse_font(unsigned x)
 {
 	unsigned y = 0;
 	for (uint8_t i = 0; i < 9; ++i) {
@@ -217,7 +224,7 @@ static unsigned reverse_font_8x16(unsigned x)
 	}
 	return y;
 }
-#endif
+
 static void ui_draw_char(uint16_t *pixels, uint16_t paint, unsigned stride,
 	    					unsigned *glyph)
 {
@@ -225,9 +232,7 @@ static void ui_draw_char(uint16_t *pixels, uint16_t paint, unsigned stride,
 	stride -= FONT_WIDTH;
 	for (unsigned i = 0; i < FONT_PPCHAR; i++) {
 		unsigned data = glyph[i];
-#if 1
-		data = reverse_font_8x16(data);
-#endif
+		data = reverse_font(data);
 		for (y = 0; y < (FONT_HEIGHT / FONT_PPCHAR); ++y) {
 			for (x = 0; x < FONT_WIDTH; ++x) {
 				if (data & 1)
@@ -290,48 +295,65 @@ static void ui_menu_draw_item(unsigned index, unsigned highlight)
 	if (index >= menu_item_number)
 		return;
 
-	struct menu_item *item = &MENU_ITEMS[index];
+	struct menu_item *item = &menu_main_items[index];
 	if (highlight) {
-		ui_hightlight_line(menu_start_lineno + index, highlightcolor);
-		ui_write_line(item->menu_title, menu_start_lineno + index, texthightlightcolor);
+		ui_hightlight_line(MENU_START_LINE + index, highlight_color);
+		ui_write_line(item->menu_title, MENU_START_LINE + index, text_hightlight_color);
 	} else {
-		ui_hightlight_line(menu_start_lineno + index, backgroundcolor);
-		ui_write_line(item->menu_title, menu_start_lineno + index, textcolor);
+		ui_hightlight_line(MENU_START_LINE + index, background_color);
+		ui_write_line(item->menu_title, MENU_START_LINE + index, text_color);
 	}
 }
 
-void ui_menu_redraw(void)
+void ui_menu_redraw(unsigned mode)
 {
-	ui_menu_clear();
-	/* redraw the header */
-	char* header = "cLK-" CLK_VERSION;
-	ui_hightlight_line(0, RGB565_BLACK);
-	ui_write_line(header, 0, RGB565_WHITE);
-	ui_draw_horizontal_line(FONT_HEIGHT, RGB565_BLACK, 13);
-	/* redraw the menu items */
-	for (uint8_t i = 0; i < menu_item_number; i++)
-	{
-		if (i == chosen_item) {
-			ui_menu_draw_item(i, 1);
-		} else {
-			ui_menu_draw_item(i, 0);
+	if (mode == MENU_REDRAW_ALL) {
+		ui_menu_clear();
+		/* redraw the header */
+		char* header = "cLK-" CLK_VERSION;
+		ui_hightlight_line(0, RGB565_BLACK);
+		ui_write_line(header, 0, RGB565_WHITE);
+		ui_draw_horizontal_line(FONT_HEIGHT, RGB565_BLACK, 11);
+		/* redraw the menu items */
+		for (uint8_t i = 0; i < menu_item_number; i++)
+		{
+			if (i == menu_chosen_item) {
+				ui_menu_draw_item(i, 1); // highlight
+			} else {
+				ui_menu_draw_item(i, 0); // not highlight
+			}
 		}
+		ui_draw_horizontal_line((menu_item_number + MENU_START_LINE)*FONT_HEIGHT+3, RGB565_BLACK, 1);
+	} else if (mode == MENU_HIGHLIGHT_UP) {
+		if (menu_chosen_item == (menu_item_number - 1)) {
+			ui_menu_draw_item(0, 0);
+		} else {
+			ui_menu_draw_item(menu_chosen_item + 1, 0);
+		}
+		ui_menu_draw_item(menu_chosen_item, 1);
+
+	} else if (mode == MENU_HIGHLIGHT_DOWN) {
+		if (menu_chosen_item == 0) {
+			ui_menu_draw_item(menu_item_number - 1, 0);
+		} else {
+			ui_menu_draw_item(menu_chosen_item - 1, 0);
+		}
+		ui_menu_draw_item(menu_chosen_item, 1);
 	}
-	ui_draw_horizontal_line((menu_item_number + menu_start_lineno)*FONT_HEIGHT+3, RGB565_BLACK, 1);
 }
 
 static int ui_menu_item_down()
 {
 	thread_set_priority(HIGHEST_PRIORITY);
 
-	if (chosen_item == (menu_item_number - 1)) {
-		chosen_item = 0;
+	if (menu_chosen_item == (menu_item_number - 1)) {
+		menu_chosen_item = 0;
 	} else {
-		chosen_item++;
+		menu_chosen_item++;
 	}
 
 	/* redraw the menu with new highlight item */
-	ui_menu_redraw();
+	ui_menu_redraw(MENU_HIGHLIGHT_DOWN);
 
     thread_set_priority(DEFAULT_PRIORITY);
 	return 0;
@@ -341,14 +363,14 @@ static int ui_menu_item_up()
 {
 	thread_set_priority(HIGHEST_PRIORITY);
 
-	if (chosen_item == 0) {
-		chosen_item = menu_item_number - 1;
+	if (menu_chosen_item == 0) {
+		menu_chosen_item = menu_item_number - 1;
 	} else {
-		chosen_item--;
+		menu_chosen_item--;
 	}
 
 	/* redraw the menu with new highlight item */
-	ui_menu_redraw();
+	ui_menu_redraw(MENU_HIGHLIGHT_UP);
 
 	thread_set_priority(DEFAULT_PRIORITY);
 	return 0;
@@ -356,9 +378,8 @@ static int ui_menu_item_up()
 
 static void ui_menu_init()
 {
-	menu_item_number = sizeof(MENU_ITEMS)/sizeof(struct menu_item);
 	/* redraw the menu */
-	ui_menu_redraw();
+	ui_menu_redraw(MENU_REDRAW_ALL);
 }
 
 void ui_handle_keydown(void)
@@ -422,7 +443,7 @@ static int ui_key_repeater(void *arg)
 		{
 			thread_sleep(10);
 			cnt++;
-			if(cnt>75) {
+			if(cnt > 50) {
 				cnt=0;
 				break;
 			}
@@ -471,7 +492,7 @@ void ui_clear_all(void)
 	unsigned bytes_per_bpp = ((fbconfig->bpp) / 8);
 	unsigned count = fbconfig->width * fbconfig->height;
 
-	memset(fbconfig->base, backgroundcolor, count * bytes_per_bpp);
+	memset(fbconfig->base, background_color, count * bytes_per_bpp);
 }
 
 void init_ui(void)
@@ -479,8 +500,8 @@ void init_ui(void)
 	ui_clear_all();
 
 	/* config fb console, it has been set up in display_init() */
-	fbcon_set_colors(RGB565_WHITE, RGB565_BLACK);
-	fbcon_set_top_margin(MAX_MENU_HEIGHT);
+	fbcon_set_colors(FBCON_BACKGROUND, FBCON_FOREGROUND);
+	fbcon_set_top_margin(MENU_MAX_HEIGHT);
 	fbcon_set_bottom_margin(0);
 	fbcon_reset();
 

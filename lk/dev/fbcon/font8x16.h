@@ -18,12 +18,14 @@
  * along with little kernel. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef _FBCON_FONT8X16_H_
+#define _FBCON_FONT8X16_H_
 
 #define FONT_PPCHAR 16  /* 1 char = font8x16[0] ~ font8x16[15] = 16 members*/
 #define FONT_WIDTH  8
 #define FONT_HEIGHT 16
 
-unsigned font8x16[] = {
+unsigned font_8x16[] = {
 	/* 32 0x20 ' ' */
 	0x00, /* 00000000 1*/
 	0x00, /* 00000000 2*/
@@ -1752,3 +1754,5 @@ unsigned font8x16[] = {
 	0x00, /* 00000000 */
 	0x00, /* 00000000 */
 };
+#endif /*_FBCON_FONT8X16_H_*/
+

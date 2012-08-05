@@ -34,6 +34,10 @@ static struct ptentry board_part_list[MAX_PTABLE_PARTS] __attribute__ ((aligned 
 				.length = 5 /* In MB */,
 		},
 		{
+				.name = "sboot",
+				.length = 5 /* In MB */,
+		},
+		{
 				.name = "boot",
 				.length = 5 /* In MB */,
 		},
@@ -68,6 +72,7 @@ void reboot(unsigned reboot_reason);
 void target_display_init();
 unsigned get_boot_reason(void);
 void cmd_oem_register();
+
 void target_init(void)
 {
 	struct flash_info *flash_info;
@@ -78,19 +83,25 @@ void target_init(void)
 	keys_init();
 	keypad_init();
 
-	uint16_t keys[] = {KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_SOFT1, KEY_SEND, KEY_CLEAR, KEY_BACK, KEY_HOME};
-	for(unsigned i=0; i< sizeof(keys)/sizeof(uint16_t); i++)
-	if (keys_get_state(keys[i]) != 0)
-	{
-		display_init();
-		display_lk_version();
-		//dprintf(ALWAYS,"key %d pressed\n", i);
-		break;
-	}
+	uint16_t keys[] = {
+			KEY_VOLUMEUP,
+			KEY_VOLUMEDOWN,
+			KEY_SOFT1,
+			KEY_SEND,
+			KEY_CLEAR,
+			KEY_BACK,
+			KEY_HOME
+	};
+
+	for(unsigned i = 0; i < sizeof(keys)/sizeof(uint16_t); i++)
+		if (keys_get_state(keys[i]) != 0) {
+			display_init();
+			display_lk_version();
+			break;
+		}
 	dprintf(INFO, "htcleo_init\n");
 
-	if(get_boot_reason()==2) // booting for offmode charging, start recovery so kernel will charge phone
-	{
+	if(get_boot_reason() == 2) { // booting for offmode charging, start recovery so kernel will charge phone
 		boot_into_recovery = 1;
 		//dprintf(INFO, "reboot needed... \n");
 		//reboot(0);
@@ -106,31 +117,35 @@ void target_init(void)
 
 	ptable_init(&flash_ptable);
 
-	if( strcmp(board_part_list[0].name,"PTABLE-BLK")==0 ) blocks_per_plen =1 ;
-	else if( strcmp(board_part_list[0].name,"PTABLE-MB")==0 ) blocks_per_plen = (1024*1024)/flash_info->block_size;
-	else panic("Invalid partition table\n");
+	if( strcmp(board_part_list[0].name,"PTABLE-BLK")==0 )
+		blocks_per_plen =1 ;
+	else if( strcmp(board_part_list[0].name,"PTABLE-MB")==0 )
+		blocks_per_plen = (1024*1024)/flash_info->block_size;
+	else
+		panic("Invalid partition table\n");
 
 	start_block = HTCLEO_FLASH_OFFSET;
-	for (unsigned i = 1; i < num_parts; i++)
-	{
+	for (unsigned i = 1; i < num_parts; i++) {
 		struct ptentry *ptn = &board_part_list[i];
-		if( IS_PART_EMPTY(ptn) ) break;
+		if( IS_PART_EMPTY(ptn) )
+			break;
 		int len = ((ptn->length) * blocks_per_plen);
 
-		if( ptn->start == 0 ) ptn->start = start_block;
-		else if( ptn->start < start_block) panic("Partition %s start %x < %x\n", ptn->name, ptn->start, start_block);
+		if( ptn->start == 0 )
+			ptn->start = start_block;
+		else if( ptn->start < start_block)
+			panic("Partition %s start %x < %x\n", ptn->name, ptn->start, start_block);
 
-		if(ptn->length == 0)
-		{
+		if(ptn->length == 0) {
 			unsigned length_for_prt = 0;
-			if( i<num_parts && !IS_PART_EMPTY((&board_part_list[i+1])) && board_part_list[i+1].start!=0)
+			if( i<num_parts && !IS_PART_EMPTY((&board_part_list[i+1]))
+					&& board_part_list[i+1].start!=0)
 			{
 				length_for_prt =  board_part_list[i+1].start - ptn->start;
 			}
 			else
 			{
-				for (unsigned j = i+1; j < num_parts; j++)
-				{
+				for (unsigned j = i+1; j < num_parts; j++) {
 						struct ptentry *temp_ptn = &board_part_list[j];
 						if( IS_PART_EMPTY(temp_ptn) ) break;
 						if( temp_ptn->length==0 ) panic("partition %s and %s have variable length\n", ptn->name, temp_ptn->name);
@@ -142,7 +157,8 @@ void target_init(void)
 		}
 
 		start_block = ptn->start + len;
-		ptable_add(&flash_ptable, ptn->name, ptn->start, len, ptn->flags, TYPE_APPS_PARTITION, PERM_WRITEABLE);
+		ptable_add(&flash_ptable, ptn->name, ptn->start, len, ptn->flags,
+				TYPE_APPS_PARTITION, PERM_WRITEABLE);
 	}
 
 	htcleo_ptable_dump(&flash_ptable);
@@ -150,20 +166,17 @@ void target_init(void)
 }
 void display_lk_version()
 {
-    char *version = "cedesmith's LK (CLK) v";
-    strcat(version,CLK_VERSION);
-	strcat(version,"\n");
-	_dputs(version);
+    _dputs("cedesmith's LK (CLK) v" CLK_VERSION "\n");
 }
 struct fbcon_config* fbcon_display(void);
 void htcleo_fastboot_init()
 {
 	// off charge and recovery boot failed, reboot to normal mode
-	if(get_boot_reason()==2) reboot(0);
+	if(get_boot_reason() == 2)
+		reboot(0);
 
 	// display not initialized
-	if(fbcon_display()==NULL)
-	{
+	if(fbcon_display() == NULL) {
 		display_init();
 		display_lk_version();
 		htcleo_ptable_dump(&flash_ptable);
@@ -194,14 +207,11 @@ unsigned android_reboot_reason = 0;
 unsigned check_reboot_mode(void);
 unsigned get_boot_reason(void)
 {
-	if(boot_reason==0xFFFFFFFF)
-	{
+	if(boot_reason==0xFFFFFFFF) {
 		boot_reason = readl(MSM_SHARED_BASE+0xef244);
 		dprintf(INFO, "boot reason %x\n", boot_reason);
-		if(boot_reason!=2)
-		{
-			if(readl(0x2FFB0000)==(readl(0x2FFB0004)^0x004b4c63))
-			{
+		if(boot_reason!=2) {
+			if(readl(0x2FFB0000)==(readl(0x2FFB0004)^0x004b4c63)) {
 				android_reboot_reason = readl(0x2FFB0000);
 				dprintf(INFO, "android reboot reason %x\n", android_reboot_reason);
 				writel(0, 0x2FFB0000);

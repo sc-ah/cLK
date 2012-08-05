@@ -34,8 +34,24 @@
 #include <dev/fbcon.h>
 #include <splash.h>
 
-#include "font5x12.h"
+#define FBCON_FONT_7X14
+//#define FBCON_FONT_8X16
+
+#ifdef FBCON_FONT_7X14
+#include "font7x14.h"
+#define FONT_WIDTH		7
+#define FONT_HEIGHT		14
+#define FONT_PPCHAR		14
+static unsigned *font = font_7x14;
+#endif
+
+#ifdef FBCON_FONT_8X16
 #include "font8x16.h"
+#define FONT_WIDTH		8
+#define FONT_HEIGHT		16
+#define FONT_PPCHAR		16
+static unsigned *font = font_8x16;
+#endif
 
 struct pos {
 	int x;
@@ -56,28 +72,16 @@ static struct fbcon_config *config = NULL;
 #define RGB888_BLACK        0x000000
 #define RGB888_WHITE        0xffffff
 
-#if 0
-#define FONT_WIDTH		5
-#define FONT_HEIGHT		12
-#define FONT_PPCHAR		2
-static unsigned *font = font5x12;
-#else
-#define FONT_WIDTH		8
-#define FONT_HEIGHT		16
-#define FONT_PPCHAR		16
-static unsigned *font = font8x16;
-#endif
-
 static uint16_t	BGCOLOR;
 static uint16_t	FGCOLOR;
 
 static struct pos cur_pos;
 static struct pos max_pos;
 
-static unsigned top_margin;
-static unsigned bottom_margin;
+static unsigned top_margin;  //pixels
+static unsigned bottom_margin;  //pixels
 
-static unsigned reverse_font8x16(unsigned x)
+static unsigned reverse_font(unsigned x)
 {
 	unsigned y = 0;
 	for (uint8_t i = 0; i < 9; ++i) {
@@ -91,13 +95,11 @@ static unsigned reverse_font8x16(unsigned x)
 static void fbcon_drawglyph(uint16_t *pixels, uint16_t paint, unsigned stride,
 			    unsigned *glyph)
 {
+    unsigned data;
+	unsigned x, y;
 	stride -= FONT_WIDTH;
-	for(unsigned i = 0; i < FONT_PPCHAR; i++) {
-		unsigned x, y;
-		unsigned data = glyph[i];
-#if 1
-		data = reverse_font8x16(data);
-#endif
+	for(unsigned i = 0; i < FONT_PPCHAR; i++) {		
+		data = reverse_font(glyph[i]);
 		for (y = 0; y < (FONT_HEIGHT / FONT_PPCHAR); ++y) {
 			for (x = 0; x < FONT_WIDTH; ++x) {
 				if (data & 1)
@@ -122,25 +124,14 @@ static void fbcon_flush(void)
 static void fbcon_scroll_up(void)
 {
 	unsigned bytes_per_bpp = ((config->bpp) / 8);
-	unsigned short *dst = config->base + (config->width * FONT_HEIGHT * (top_margin + 1) * bytes_per_bpp);
-	unsigned short *src = dst + (config->width * FONT_HEIGHT);
-#if 0
-	unsigned count = config->width * (config->height - FONT_HEIGHT);
-	while(count--) {
-		*dst++ = *src++;
-	}
-#else
-	memcpy(dst, src, config->width * (config->height - FONT_HEIGHT) * bytes_per_bpp);
-#endif
+	unsigned char *dst = config->base + (config->width * (top_margin) * bytes_per_bpp);
+	unsigned char *src = dst + (config->width * FONT_HEIGHT * bytes_per_bpp);
+	unsigned count = config->width * (config->height - (top_margin + bottom_margin)) * bytes_per_bpp;
+    /* shift up one line */
+	memcpy(dst, src, count);
 	/* clear the last line */
-#if 0
-	count = config->width * FONT_HEIGHT;
-	while(count--) {
-		*dst++ = BGCOLOR;
-	}
-#else
-	memset(dst, BGCOLOR, config->width * FONT_HEIGHT);
-#endif
+	memset(dst + count - config->width * FONT_HEIGHT * bytes_per_bpp, BGCOLOR,
+				config->width * FONT_HEIGHT * bytes_per_bpp);
 	fbcon_flush();
 }
 
@@ -148,8 +139,9 @@ static void fbcon_scroll_up(void)
 void fbcon_clear(void)
 {
 	unsigned bytes_per_bpp = ((config->bpp) / 8);
-	unsigned count = config->width * ((config->height - (top_margin + bottom_margin)) * FONT_HEIGHT);
-	memset(config->base + (config->width * FONT_HEIGHT * (top_margin + 1) * bytes_per_bpp), BGCOLOR, count * bytes_per_bpp);
+	unsigned count = config->width * (config->height - (top_margin + bottom_margin));
+	memset(config->base + (config->width * (top_margin) * bytes_per_bpp),
+			BGCOLOR, count * bytes_per_bpp);
 }
 
 void fbcon_set_top_margin(unsigned tm)
@@ -168,8 +160,6 @@ void fbcon_set_colors(unsigned bg, unsigned fg)
 	FGCOLOR = fg;
 }
 
-static unsigned putc_sync = 0;
-
 void fbcon_putc(char c)
 {
 	uint16_t *pixels;
@@ -186,23 +176,16 @@ void fbcon_putc(char c)
 		return;
 	}
 
-	while(putc_sync)
-		thread_sleep(10);
-
-	putc_sync = 1;
-
 	pixels = config->base;
 	pixels += cur_pos.y * FONT_HEIGHT * config->width;
-	pixels += cur_pos.x * (FONT_WIDTH + 1);
+	pixels += cur_pos.x * (FONT_WIDTH);
 
 	fbcon_drawglyph(pixels, FGCOLOR, config->stride,
 			font + (c - 32) * FONT_PPCHAR);
 
 	cur_pos.x++;
-	if (cur_pos.x < max_pos.x) {
-		putc_sync = 0;
+	if (cur_pos.x < max_pos.x)
 		return;
-	}
 
 newline:
 	cur_pos.y++;
@@ -212,7 +195,6 @@ newline:
 		fbcon_scroll_up();
 	} else
 		fbcon_flush();
-	putc_sync = 0;
 }
 
 void fbcon_setup(struct fbcon_config *_config)
@@ -226,8 +208,8 @@ void fbcon_setup(struct fbcon_config *_config)
 
 	switch (config->format) {
 	case FB_FORMAT_RGB565:
-		fg = RGB565_BLACK;
-		bg = RGB565_WHITE;
+		fg = RGB565_WHITE;
+		bg = RGB565_BLACK;
 		break;
 	case FB_FORMAT_RGB888:
 		fg = RGB888_WHITE;
@@ -245,10 +227,10 @@ void fbcon_setup(struct fbcon_config *_config)
 	fbcon_set_bottom_margin(0);
 
 	cur_pos.x = 0;
-	cur_pos.y = top_margin + 1;
+	cur_pos.y = top_margin / FONT_HEIGHT + 1;
 
-	max_pos.x = config->width / (FONT_WIDTH+1);
-	max_pos.y = (config->height - 1) / FONT_HEIGHT - bottom_margin;
+	max_pos.x = config->width / FONT_WIDTH;
+	max_pos.y = (config->height - bottom_margin - 1) / FONT_HEIGHT;
 
 #if !DISPLAY_SPLASH_SCREEN
 	fbcon_clear();
@@ -260,10 +242,10 @@ void fbcon_reset(void)
 	fbcon_clear();
 
 	cur_pos.x = 0;
-	cur_pos.y = top_margin + 1;
+	cur_pos.y = top_margin / FONT_HEIGHT + 1;
 
-	max_pos.x = config->width / (FONT_WIDTH+1);
-	max_pos.y = (config->height - 1) / FONT_HEIGHT - bottom_margin;
+	max_pos.x = config->width / FONT_WIDTH;
+	max_pos.y = (config->height - bottom_margin - 1) / FONT_HEIGHT;
 }
 
 struct fbcon_config* fbcon_display(void)

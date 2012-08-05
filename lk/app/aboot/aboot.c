@@ -97,7 +97,7 @@ unsigned long long mmc_ptn_offset (unsigned char * name);
 unsigned long long mmc_ptn_size (unsigned char * name);
 void display_shutdown(void);
 
-void init_ui(void);
+extern void init_ui(void); // in ui.c
 
 static void ptentry_to_tag(unsigned **ptr, struct ptentry *ptn)
 {
