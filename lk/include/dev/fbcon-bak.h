@@ -1,7 +1,8 @@
 /*
- * Copyright (c) 2009, Google Inc.
+ * Copyright (c) 2008, Google Inc.
  * All rights reserved.
- * Copyright (c) 2009, Code Aurora Forum. All rights reserved.
+ *
+ * Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,11 +11,8 @@
  *    notice, this list of conditions and the following disclaimer.
  *  * Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
+ *    the documentation and/or other materials provided with the 
  *    distribution.
- *  * Neither the name of Google, Inc. nor the names of its contributors
- *    may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -23,59 +21,37 @@
  * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
  * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
  * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
 
-#include <debug.h>
-#include <printf.h>
-#include <arch/arm/dcc.h>
-#include <dev/fbcon.h>
-#include <dev/uart.h>
+#ifndef __DEV_FBCON_H
+#define __DEV_FBCON_H
 
-void _dputc(char c)
-{
-#if WITH_DEBUG_DCC
-	if (c == '\n') {
-		while (dcc_putc('\r') < 0);
-	}
-	while (dcc_putc(c) < 0);
-#endif
-#if WITH_DEBUG_UART
-	uart_putc(0, c);
-#endif
-#if WITH_DEBUG_FBCON && WITH_DEV_FBCON
-	fbcon_putc(c, 0);
-#endif
-#if WITH_DEBUG_JTAG
-	jtag_dputc(c);
-#endif
-}
+#define FB_FORMAT_RGB565 0
+#define FB_FORMAT_RGB888 1
 
-int dgetc(char *c)
-{
-	int n;
-#if WITH_DEBUG_DCC
-	n = dcc_getc();
-#elif WITH_DEBUG_UART
-	n = uart_getc(0, 0);
-#else
-	n = -1;
-#endif
-	if (n < 0) {
-		return -1;
-	} else {
-		*c = n;
-		return 0;
-	}
-}
+struct fbcon_config {
+	void		*base;
+	unsigned	width;
+	unsigned	height;
+	unsigned	stride;
+	unsigned	bpp;
+	unsigned	format;
 
-void platform_halt(void)
-{
-	dprintf(INFO, "HALT: spinning forever...\n");
-	for(;;);
-}
+	void		(*update_start)(void);
+	int		(*update_done)(void);
+};
+void fbcon_set_colors(unsigned bg, unsigned fg);
+void fbcon_set_top_margin(unsigned tm);
+void fbcon_set_bottom_margin(unsigned bm);
+void fbcon_reset(void);
+void fbcon_setup(struct fbcon_config *cfg);
+void fbcon_putc(char c);
+void fbcon_clear(void);
+struct fbcon_config* fbcon_display(void);
 
+#endif /* __DEV_FBCON_H */
