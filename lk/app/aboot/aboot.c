@@ -328,10 +328,6 @@ int boot_linux_from_flash(void)
 
 	if (target_is_emmc_boot()) {
 		hdr = (struct boot_img_hdr *)EMMC_BOOT_IMG_HEADER_ADDR;
-		if (memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
-			dprintf(CRITICAL, "ERROR: Invalid boot image header\n");
-			return -1;
-		}
 		goto continue_boot;
 	}
 
@@ -375,11 +371,6 @@ int boot_linux_from_flash(void)
 
 	if (memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
 		dprintf(CRITICAL, "ERROR: Invaled boot image heador\n");
-		goto failed;
-	}
-
-	if (hdr->page_size != page_size) {
-		dprintf(CRITICAL, "ERROR: Invalid boot image pagesize. Device pagesize: %d, Image pagesize: %d\n",page_size,hdr->page_size);
 		goto failed;
 	}
 
