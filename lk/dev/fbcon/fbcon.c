@@ -180,6 +180,8 @@ static void fbcon_drawglyph(char *pixels, uint32_t paint, unsigned stride,
 
 }
 
+#define retrys 200
+
 void fbcon_draw_msg_background(unsigned y_start, unsigned y_end,
 	uint32_t old_paint, int update)
 {
@@ -204,11 +206,11 @@ void fbcon_draw_msg_background(unsigned y_start, unsigned y_end,
 		check_color = SELECT_BGCOLOR;
 	}
 
-	dprintf(INFO, "CONFIG WIDTH IS: %d \n", config->width);
-	dprintf(INFO, "FONT HEIGHT IS: %d \n", FONT_HEIGHT);
-	dprintf(INFO, "YEND IS: %d \n", y_end);
-	dprintf(INFO, "YSTART IS: %d \n", y_start);
-	dprintf(INFO, "count is %d", count);
+	dprintfr(INFO, "CONFIG WIDTH IS: %d \n", config->width);
+	dprintfr(INFO, "FONT HEIGHT IS: %d \n", FONT_HEIGHT);
+	dprintfr(INFO, "YEND IS: %d \n", y_end);
+	dprintfr(INFO, "YSTART IS: %d \n", y_start);
+	dprintfr(INFO, "count is %d", count);
 
 
 	//J0SH1X: this loop will be infinite idk how count is calculated
@@ -221,6 +223,10 @@ void fbcon_draw_msg_background(unsigned y_start, unsigned y_end,
 			tmp_color |= *(pixels+j) << j*8;
 		}
 
+		//fix the freaking loop so we can exit it
+
+
+
 		if (tmp_color == check_color) {
 			for (j = 0; j < (config->bpp / 8); j++) {
 				*pixels = (unsigned char) tmp1_color;
@@ -229,6 +235,10 @@ void fbcon_draw_msg_background(unsigned y_start, unsigned y_end,
 			}
 		} else {
 			pixels += config->bpp / 8;
+		}
+
+				if (i >= retrys){
+			break;
 		}
 	}
 	fbcon_flush();
