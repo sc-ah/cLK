@@ -31,6 +31,7 @@
 
 #define UPDATE_MAGIC       "MSM-RADIO-UPDATE"
 #define UPDATE_MAGIC_SIZE  16
+#define FFBM_MODE_BUF_SIZE   8
 #define UPDATE_VERSION     0x00010000
 
 

@@ -17,7 +17,9 @@ OBJS += \
 	$(LOCAL_DIR)/jtag.o \
 	$(LOCAL_DIR)/lcdc.o \
 	$(LOCAL_DIR)/mddi.o \
-	$(LOCAL_DIR)/mmc.o
+	$(LOCAL_DIR)/mmc.o\
+	 $(LOCAL_DIR)/display_menu.o\
+	 $(LOCAL_DIR)/menu_keys_detect.o\
 
 ifeq ($(PLATFORM),msm8x60)
 	OBJS += $(LOCAL_DIR)/mipi_dsi.o \
