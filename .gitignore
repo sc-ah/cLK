@@ -1,0 +1,5 @@
+lk/build-htcleo
+bin
+build-stuff
+*.nbh
+settings.json
