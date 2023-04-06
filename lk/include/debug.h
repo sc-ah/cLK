@@ -52,8 +52,10 @@ int _dprintf(const char *fmt, ...) __PRINTFLIKE(1, 2);
 int _dvprintf(const char *fmt, va_list ap);
 
 #define dputc(level, str) do { if ((level) <= DEBUGLEVEL) { _dputc(str); } } while (0)
+#define dprintf(level, x...) do { } while (0)
+#define dprintfr(level, x...) do { if ((0) <= DEBUGLEVEL) { _dprintf(x); } } while (0)
 #define dputs(level, str) do { if ((level) <= DEBUGLEVEL) { _dputs(str); } } while (0)
-#define dprintf(level, x...) do { if ((level) <= DEBUGLEVEL) { _dprintf(x); } } while (0)
+//#define dprintf(level, x...) do { if ((0) <= DEBUGLEVEL) { _dprintf(x); } } while (0)
 #define dvprintf(level, x...) do { if ((level) <= DEBUGLEVEL) { _dvprintf(x); } } while (0)
 
 /* input */
