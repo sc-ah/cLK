@@ -1,6 +1,4 @@
 /*
- * Copyright (c) 2008 Travis Geiselbrecht
- *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
  * (the "Software"), to deal in the Software without restriction,
@@ -20,20 +18,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef __PLATFORM_TIMER_H
-#define __PLATFORM_TIMER_H
+#ifndef __ARRAY_H
+#define __ARRAY_H
 
-typedef enum handler_return (*platform_timer_callback)(void *arg, time_t now);
+#define ARRAY_SIZE(x) ((sizeof(x))/sizeof(x[0]))
+#define ARRAY_AND_SIZE(x) x, ((sizeof(x))/sizeof(x[0]))
 
-status_t platform_set_periodic_timer(platform_timer_callback callback, void *arg, time_t interval);
-
-void platform_init_timer(void);
-void platform_deinit_timer(void);
-void platform_stop_timer(void);
-void mdelay(unsigned msecs);
-void udelay(unsigned usecs);
-
-bigtime_t current_time_hires(void);
-time_t current_time(void);
 #endif
-
