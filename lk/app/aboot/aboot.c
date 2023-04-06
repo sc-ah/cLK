@@ -47,6 +47,7 @@
 #include "bootimg.h"
 #include "fastboot.h"
 #include "version.h"
+#include <menu_keys_detect.h>
 
 #define EXPAND(NAME) #NAME
 #define TARGET(NAME) EXPAND(NAME)
@@ -487,6 +488,13 @@ void cmd_erase(const char *arg, void *data, unsigned sz)
 	fastboot_okay("");
 }
 
+void cmd_reset_fbcon(){
+	fbcon_reset();
+}
+void cmd_clear_fbcon(){
+	fbcon_clear();
+}
+
 
 void cmd_erase_mmc(const char *arg, void *data, unsigned sz)
 {
@@ -668,6 +676,8 @@ void aboot_init_fastboot(unsigned usb_init)
 	fastboot_register("powerdown", cmd_powerdown);
 	fastboot_publish("product", TARGET(BOARD));
 	fastboot_publish("kernel", "lk");
+	fastboot_register("reset_fbcon", cmd_reset_fbcon);
+	fastboot_register("clear_fbcon", cmd_clear_fbcon);
 
 	fastboot_init(target_get_scratch_address(), MEMBASE - SCRATCH_ADDR - 0x00100000);
 	udc_start();
