@@ -109,6 +109,7 @@ static const char *lock_menu_common_msg = "If you lock the bootloader, "\
 
 static bool is_thread_start = false;
 static struct select_msg_info msg_info;
+uint32_t optionindex = -1;
 
 static char *verify_option_menu[] = {
 		[POWEROFF] = "Power off\n",
@@ -123,7 +124,7 @@ static char *fastboot_option_menu[] = {
 		[2] = "Recovery mode\n",
 		[3] = "Power off\n",
 #if !ABOOT_STANDALONE
-		[4] = "Boot to FFBM\n"
+		[4] = "Boot to UEFI\n"
 #endif
 };
 
@@ -141,6 +142,7 @@ struct unlock_option_msg munlock_option_msg[] = {
 
 static int big_factor = 2;
 static int common_factor = 1;
+bool buttonthreadrunning = false;
 
 char charVal(char c)
 {
@@ -578,11 +580,11 @@ void display_fastboot_menu_renew(struct select_msg_info *fastboot_msg_info)
 			break;
 	}
 	fbcon_draw_line(msg_type);
+
 	display_fbcon_menu_message(fastboot_option_menu[option_index],
 		msg_type, big_factor, 0);
 	fbcon_draw_line(msg_type);
-	display_fbcon_menu_message("\n\nPress volume key to select, and "\
-		"press power key to select\n\n", FBCON_COMMON_MSG, common_factor, 0);
+	display_fbcon_menu_message("\n\nUse keys to navigate\n\n", FBCON_COMMON_MSG, common_factor, 0);
 
 	display_fbcon_menu_message("FASTBOOT MODE\n", FBCON_RED_MSG, common_factor, 0);
 
@@ -645,12 +647,11 @@ void msg_lock_init(void)
 	}
 }
 
-extern int ui_key_listener_thread();
+extern int ui_key_listener_thread(void *param);
 
 static void display_menu_thread_start(struct select_msg_info *msg_info)
 {
 	thread_t *thr;
-
 	if (!is_thread_start) {
 		thread_create("key_listener", &ui_key_listener_thread, (void*)msg_info, DEFAULT_PRIORITY, 4096);
 		if (!thr) {
@@ -659,6 +660,7 @@ static void display_menu_thread_start(struct select_msg_info *msg_info)
 		}
 		thread_resume(thr);
 		is_thread_start = true;
+		dprintfr(INFO, "index2 is at %u \n", optionindex);
 	}
 }
 
@@ -688,7 +690,7 @@ void display_unlock_menu(int type, bool status)
 	display_menu_thread_start(unlock_menu_msg_info);
 }
 
-void display_fastboot_menu(void)
+void display_fastboot_menu(uint32_t menuindex)
 {
 	struct select_msg_info *fastboot_menu_msg_info;
 	fastboot_menu_msg_info = &msg_info;
@@ -708,7 +710,7 @@ void display_fastboot_menu(void)
 	 * The menu is switched base on the option index
 	 * Initialize the option index and last_msg_type
 	 */
-	fastboot_menu_msg_info->info.option_index = 0;
+	fastboot_menu_msg_info->info.option_index = menuindex;
 	fastboot_menu_msg_info->last_msg_type =
 		fastboot_menu_msg_info->info.msg_type;
 
@@ -716,5 +718,9 @@ void display_fastboot_menu(void)
 	mutex_release(&fastboot_menu_msg_info->msg_lock);
 
 	dprintf(INFO, "creating fastboot menu keys detect thread\n");
-	display_menu_thread_start(fastboot_menu_msg_info);
+	optionindex = fastboot_menu_msg_info->info.option_index;
+	if (!buttonthreadrunning){
+	display_menu_thread_start(fastboot_menu_msg_info );
+	}
+	buttonthreadrunning = true;
 }

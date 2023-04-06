@@ -66,7 +66,7 @@ static const char *emmc_cmdline = " androidboot.emmc=true";
 //static const char *battchg_pause = " androidboot.battchg_pause=true";
 static const char *battchg_pause = " androidboot.mode=offmode_charging";
 
-unsigned boot_into_sboot = 0;
+unsigned boot_into_uefi = 0;
 
 static struct udc_device surf_udc_device = {
 	.vendor_id	= 0x18d1,
@@ -337,7 +337,7 @@ int boot_linux_from_flash(void)
 		return -1;
 	}
 
-	if((!boot_into_recovery)&&(!boot_into_sboot))
+	if((!boot_into_recovery)&&(!boot_into_uefi))
 	{
 		ptn = ptable_find(ptable, "boot");
 		if (ptn == NULL) {
@@ -345,12 +345,12 @@ int boot_linux_from_flash(void)
 			return -1;
 		}
 	}
-	else if (boot_into_sboot)	//Boot from sboot partition
+	else if (boot_into_uefi)	//Boot from uefi partition
 	{ 
-		ptn = ptable_find(ptable,"sboot");
+		ptn = ptable_find(ptable,"uefi");
 		if (ptn == NULL) {
-			dprintf(CRITICAL,"ERROR: No sboot partition found!\n");
-			boot_into_sboot=0;
+			dprintf(CRITICAL,"ERROR: No uefi partition found!\n");
+			boot_into_uefi=0;
 			goto failed;
 		}
 	}
@@ -560,7 +560,7 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 	}
 
 	if (!strcmp(ptn->name, "boot") || !strcmp(ptn->name, "recovery")
-			|| !strcmp(ptn->name, "sboot")) {
+			|| !strcmp(ptn->name, "uefi")) {
 		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
 			fastboot_fail("image is not a boot image");
 			return;

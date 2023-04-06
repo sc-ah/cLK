@@ -129,7 +129,7 @@ void ui_handle_keyup(void);
 void ui_handle_keydown(void);
 void ui_menu_redraw(unsigned mode);
 
-extern unsigned boot_into_sboot; // in aboot.c
+extern unsigned boot_into_uefi; // in aboot.c
 extern struct ptable flash_ptable;  // in init.c
 
 static struct menu_item* ui_get_menu_selection()
@@ -151,7 +151,7 @@ static void ui_handle_command(void)
 
 	if (!memcmp(command,"boot_recv", strlen(command)))
 	{
-		boot_into_sboot = 0;
+		boot_into_uefi = 0;
         boot_into_recovery = 1;
         boot_linux_from_flash();
 	}
@@ -165,13 +165,13 @@ static void ui_handle_command(void)
 	}
 	else if (!memcmp(command,"boot_sbot", strlen(command)))
 	{
-        boot_into_sboot = 1;
+        boot_into_uefi = 1;
         boot_into_recovery = 0;
         boot_linux_from_flash();
 	}
 	else if (!memcmp(command,"boot_nand", strlen(command)))
 	{
-        boot_into_sboot = 0;
+        boot_into_uefi = 0;
         boot_into_recovery = 0;
         boot_linux_from_flash();
 	}
@@ -397,11 +397,11 @@ void init_ui(void)
 
 	/* config fb console, it has been set up in display_init() */
 	//
-	fbcon_clear();
+	fbcon_reset();
 
 	/* init the menu */
 	//ui_menu_init();
-	display_fastboot_menu();
+	display_fastboot_menu(0);
 
 	/* start keypad listener */
 	ui_key_listener_start();

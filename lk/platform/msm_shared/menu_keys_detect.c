@@ -48,7 +48,7 @@ uint16_t keyp = KEY_ERROR;
 #define KEY_DETECT_FREQUENCY		50
 
 extern int  boot_linux_from_flash(void); // in aboot.c
-extern unsigned boot_into_sboot;
+extern unsigned boot_into_uefi;
 
 #ifndef TRUE
 #define TRUE true
@@ -115,7 +115,7 @@ static time_t before_time;
 
 extern bool pwr_key_is_pressed;
 extern void reboot_device(unsigned reboot_reason);
-extern void shutdown_device(void);
+extern void shutdown(void);
 
 typedef uint32_t (*keys_detect_func)(void);
 typedef void (*keys_action_func)(struct select_msg_info* msg_info);
@@ -124,6 +124,8 @@ struct keys_stru {
 	int type;
 	keys_detect_func keys_pressed_func;
 };
+
+extern uint32_t optionindex;
 
 #if WITH_LK2ND_DEVICE
 #include <lk2nd/device/keys.h>
@@ -190,7 +192,7 @@ static void update_device_status(struct select_msg_info* msg_info, int reason)
 	fbcon_clear();
 	switch (reason) {
 		case RECOVER:
-		boot_into_sboot = 0;
+		boot_into_uefi = 0;
         boot_into_recovery = 1;
 		boot_linux_from_flash();
 			break;
@@ -206,7 +208,7 @@ static void update_device_status(struct select_msg_info* msg_info, int reason)
 		case CONTINUE:
 			/* Continue boot, no need to detect the keys'status */
 			msg_info->info.is_exit = true;
-		boot_into_sboot = 0;
+		boot_into_uefi = 0;
         boot_into_recovery = 0;
 		boot_linux_from_flash();
 			break;
@@ -361,6 +363,61 @@ static void power_key_func(struct select_msg_info* msg_info)
 	}
 }
 
+void j0shkeyhandler(uint32_t index, uint16_t key){
+	switch (key) {
+		case KEY_SEND:
+		//switch over index here to decide which page we are on	
+
+		switch(index){
+		case 0:
+			boot_into_recovery = 0;
+			boot_into_uefi = 0;
+			boot_linux_from_flash();
+			break;
+		case 1: 
+		dprintfr(INFO, "REBOOT BOOTLOADER");
+		reboot_device(FASTBOOT_MODE);
+		break;
+		case 2:
+		boot_into_recovery = 1;
+		boot_into_uefi = 0;
+		boot_linux_from_flash();
+		break;
+		case 3:
+		shutdown();
+		break;
+		case 4:
+		boot_into_recovery =0;
+		boot_into_uefi = 1;
+		boot_linux_from_flash();
+		default:
+			dprintfr(ERROR, "Invalid index: %d\n", index);
+			break;
+	}
+
+		break;
+		case KEY_VOLUMEUP:
+		if (optionindex > 0){
+		optionindex--;
+		}else {
+			optionindex = 4;
+		}
+		fbcon_reset();
+		display_fastboot_menu(optionindex);
+		//call redraw ui here
+		break;
+		case KEY_VOLUMEDOWN:
+		if (optionindex < 4){
+		optionindex++;
+		}else {
+			optionindex = 0;
+		}
+		fbcon_reset();
+		display_fastboot_menu(optionindex);
+	}
+
+}
+
 /* Initialize different page's function
  * DISPLAY_MENU_UNLOCK/DISPLAY_MENU_UNLOCK_CRITICAL
  * DISPLAY_MENU_MORE_OPTION/DISPLAY_MENU_FASTBOOT:
@@ -498,7 +555,7 @@ int select_msg_keys_detect(void *param) {
 
 
 
-void ui_handle_keydown(void *param)
+void ui_handle_keydown(void *param, uint32_t optionindex)
 {
 	struct select_msg_info *msg_info = (struct select_msg_info*)param;
 	msg_lock_init();
@@ -508,27 +565,26 @@ void ui_handle_keydown(void *param)
     switch (keys_htcleo[keyp])
 	{
         case KEY_VOLUMEUP:
-			dprintf(INFO,"VOLUME UP PRESSED \n");
+			dprintfr(INFO,"VOLUME UP PRESSED \n");
 			//  mutex_acquire(&msg_info->msg_lock);
 			//  menu_volume_up_func(msg_info);
 			// // menu_pages_action[msg_info->info.msg_type].up_action_func(msg_info);
 			//  mutex_release(&msg_info->msg_lock);
-			//update_volume_up_bg(msg_info);
+			j0shkeyhandler(optionindex, keys_htcleo[0]);
 			
 			break;
 
         case KEY_VOLUMEDOWN:
-			dprintf(INFO,"VOLUME DOWN PRESSED \n");
-			mutex_acquire(&msg_info->msg_lock);
-			menu_pages_action[msg_info->info.msg_type].down_action_func(msg_info);
-			mutex_release(&msg_info->msg_lock);
+			dprintfr(INFO,"VOLUME DOWN PRESSED \n");
+			j0shkeyhandler(optionindex, keys_htcleo[1]);
 			break;
 
         case KEY_SEND: // dial
-			dprintf(INFO,"DIAL PRESSED \n");
-            mutex_acquire(&msg_info->msg_lock);
-			menu_pages_action[msg_info->info.msg_type].enter_action_func(msg_info);
-			mutex_release(&msg_info->msg_lock);
+			dprintfr(INFO,"DIAL PRESSED \n");
+            // mutex_acquire(&msg_info->msg_lock);
+			// menu_pages_action[msg_info->info.msg_type].enter_action_func(msg_info);
+			// mutex_release(&msg_info->msg_lock);
+			j0shkeyhandler(optionindex, keys_htcleo[3]);
 			break;
 
         case KEY_CLEAR:  // hang up
@@ -583,7 +639,7 @@ static int ui_key_repeater(void *arg)
 
 	while((keyp != KEY_ERROR) && (last_key == keyp)
 			&& (keys_get_state(keys_htcleo[keyp])!=0)) {
-		ui_handle_keydown(arg);
+		ui_handle_keydown(arg,optionindex);
 		thread_sleep(100);
 	}
 
@@ -591,15 +647,18 @@ static int ui_key_repeater(void *arg)
 	return 0;
 }
 
+
+
 int ui_key_listener_thread(void *param)
 {
+	dprintfr(INFO, "UI_KEY_LISTENER: %u", optionindex);
 	for (;;)
 	{
         for(uint16_t i = 0; i < sizeof(keys_htcleo)/sizeof(uint16_t); i++)
 		{
 			if (keys_get_state(keys_htcleo[i]) != 0) {
 				keyp = i;
-				ui_handle_keydown(param);
+				ui_handle_keydown(param, optionindex);
 				thread_resume(thread_create("ui_key_repeater", &ui_key_repeater, NULL, DEFAULT_PRIORITY, 4096));
 				while (keys_get_state(keys_htcleo[keyp]) !=0)
 					thread_sleep(1);
