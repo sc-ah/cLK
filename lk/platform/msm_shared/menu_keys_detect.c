@@ -363,6 +363,8 @@ static void power_key_func(struct select_msg_info* msg_info)
 	}
 }
 
+extern void fbcon_flush(void);
+
 void j0shkeyhandler(uint32_t index, uint16_t key){
 	switch (key) {
 		case KEY_SEND:
@@ -402,7 +404,7 @@ void j0shkeyhandler(uint32_t index, uint16_t key){
 		}else {
 			optionindex = 4;
 		}
-		fbcon_reset();
+		fbcon_flush();
 		display_fastboot_menu(optionindex);
 		//call redraw ui here
 		break;
@@ -412,7 +414,7 @@ void j0shkeyhandler(uint32_t index, uint16_t key){
 		}else {
 			optionindex = 0;
 		}
-		fbcon_reset();
+		fbcon_flush();
 		display_fastboot_menu(optionindex);
 	}
 
