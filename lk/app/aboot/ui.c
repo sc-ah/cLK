@@ -56,6 +56,8 @@
 #include "fastboot.h"
 #include "recovery.h"
 #include "version.h"
+#include <menu_keys_detect.h>
+#include <display_menu.h>
 
 #define MENU_FONT_8X16
 
@@ -85,20 +87,6 @@ static unsigned *font = ui_font_8x16;
 
 #define FBCON_FOREGROUND		RGB565_BLACK
 #define FBCON_BACKGROUND		RGB565_WHITE
-
-#define KEY_ERROR 99
-
-uint16_t keyp = KEY_ERROR;
-
-uint16_t keys[] = {
-	KEY_VOLUMEUP,
-	KEY_VOLUMEDOWN,
-	KEY_SOFT1,
-	KEY_SEND,
-	KEY_CLEAR,
-	KEY_BACK,
-	KEY_HOME
-};
 
 #define MENU_START_LINE 	(2)
 
@@ -173,7 +161,7 @@ static void ui_handle_command(void)
 	}
 	else if (!memcmp(command,"prnt_clrs", strlen(command)))
 	{
-		fbcon_reset();
+		fbcon_clear();
 	}
 	else if (!memcmp(command,"boot_sbot", strlen(command)))
 	{
@@ -382,104 +370,12 @@ static void ui_menu_init()
 	ui_menu_redraw(MENU_REDRAW_ALL);
 }
 
-void ui_handle_keydown(void)
-{
-	if (keyp == KEY_ERROR)
-		return;
+extern void ui_handle_keydown();
+extern void ui_handle_keyup();
 
-    switch (keys[keyp])
-	{
-        case KEY_VOLUMEUP:
-			ui_menu_item_up();
-			break;
+extern int ui_key_repeater(void *arg);
 
-        case KEY_VOLUMEDOWN:
-			ui_menu_item_down();
-			break;
-
-        case KEY_SEND: // dial
-            ui_handle_command();
-			break;
-
-        case KEY_CLEAR:  // hang up
-        case KEY_BACK: // go back
-			break;
-	}
-}
-
-void ui_handle_keyup(void)
-{
-	if (keyp == KEY_ERROR)
-		return;
-
-    switch (keys[keyp])
-	{
-        case KEY_VOLUMEUP:
-			break;
-        case KEY_VOLUMEDOWN:
-			break;
-        case KEY_SEND: // dial
-			break;
-        case KEY_CLEAR: //hang up
-			break;
-        case KEY_BACK: // go back
-			break;
-	}
-}
-
-static int ui_key_repeater(void *arg)
-{
-	uint16_t last_key = keyp;
-	uint8_t cnt = 0;
-
-	for(;;)
-	{
-		if ((keyp == KEY_ERROR || (last_key != keyp)))
-		{
-			thread_exit(0);
-			return 0;
-		}
-		else
-		{
-			thread_sleep(10);
-			cnt++;
-			if(cnt > 50) {
-				cnt=0;
-				break;
-			}
-		}
-	}
-
-	while((keyp != KEY_ERROR) && (last_key == keyp)
-			&& (keys_get_state(keys[keyp])!=0)) {
-		ui_handle_keydown();
-		thread_sleep(100);
-	}
-
-	thread_exit(0);
-	return 0;
-}
-
-int ui_key_listener_thread(void *arg)
-{
-	for (;;)
-	{
-        for(uint16_t i = 0; i < sizeof(keys)/sizeof(uint16_t); i++)
-		{
-			if (keys_get_state(keys[i]) != 0) {
-				keyp = i;
-				ui_handle_keydown();
-				thread_resume(thread_create("ui_key_repeater", &ui_key_repeater, NULL, DEFAULT_PRIORITY, 4096));
-				while (keys_get_state(keys[keyp]) !=0)
-					thread_sleep(1);
-				ui_handle_keyup();
-				keyp = KEY_ERROR;
-			}
-		}
-	}
-	thread_exit(0);
-	return 0;
-}
+extern int ui_key_listener_thread(void *arg);
 
 void ui_key_listener_start(void)
 {
@@ -500,13 +396,12 @@ void init_ui(void)
 	ui_clear_all();
 
 	/* config fb console, it has been set up in display_init() */
-	fbcon_set_colors(FBCON_BACKGROUND, FBCON_FOREGROUND);
-	fbcon_set_top_margin(MENU_MAX_HEIGHT);
-	fbcon_set_bottom_margin(0);
-	fbcon_reset();
+	//
+	fbcon_clear();
 
 	/* init the menu */
-	ui_menu_init();
+	//ui_menu_init();
+	display_fastboot_menu();
 
 	/* start keypad listener */
 	ui_key_listener_start();
