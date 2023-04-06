@@ -124,4 +124,5 @@ void fbcon_set_colors_old(unsigned bg, unsigned fg);
 void fbcon_set_top_margin(unsigned tm);
 void fbcon_set_bottom_margin(unsigned bm);
 int fetch_image_from_partition(void);
+void fbcon_flush(void);
 #endif /* __DEV_FBCON_H */
