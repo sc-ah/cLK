@@ -12,6 +12,13 @@
 #include <smem.h>
 #include <platform/iomap.h>
 #include <reg.h>
+// #include <target/microp.h>
+// #include <target/board_htcleo.h>
+// #include <platform/gpio.h>
+// #include <msm_i2c.h>
+// #include <target/clock.h>
+// #include <platform/irqs.h>
+// #include <pcom.h>
 
 #include "version.h"
 
@@ -31,11 +38,11 @@ static struct ptentry board_part_list[MAX_PTABLE_PARTS] __attribute__ ((aligned 
 		},
 		{
 				.name = "recovery",
-				.length = 5 /* In MB */,
+				.length = 64 /* In MB */,
 		},
 		{
-				.name = "sboot",
-				.length = 5 /* In MB */,
+				.name = "uefi",
+				.length = 20 /* In MB */,
 		},
 		{
 				.name = "boot",
@@ -54,7 +61,47 @@ static struct ptentry board_part_list[MAX_PTABLE_PARTS] __attribute__ ((aligned 
 		},
 };
 
+// /*******************************************************************************
+//  * i2C
+//  ******************************************************************************/
+// static void msm_set_i2c_mux(int mux_to_i2c) {
+// 	if (mux_to_i2c) {
+// 		pcom_gpio_tlmm_config(MSM_GPIO_CFG(GPIO_I2C_CLK, 0, MSM_GPIO_CFG_OUTPUT, MSM_GPIO_CFG_NO_PULL, MSM_GPIO_CFG_8MA), 0);
+// 		pcom_gpio_tlmm_config(MSM_GPIO_CFG(GPIO_I2C_DAT, 0, MSM_GPIO_CFG_OUTPUT, MSM_GPIO_CFG_NO_PULL, MSM_GPIO_CFG_8MA), 0);
+// 	} else {
+// 		pcom_gpio_tlmm_config(MSM_GPIO_CFG(GPIO_I2C_CLK, 1, MSM_GPIO_CFG_INPUT, MSM_GPIO_CFG_NO_PULL, MSM_GPIO_CFG_2MA), 0);
+// 		pcom_gpio_tlmm_config(MSM_GPIO_CFG(GPIO_I2C_DAT, 1, MSM_GPIO_CFG_INPUT, MSM_GPIO_CFG_NO_PULL, MSM_GPIO_CFG_2MA), 0);
+// 	}
+// }
 
+// static struct msm_i2c_pdata i2c_pdata = {
+// 	.i2c_clock = 400000,
+// 	.clk_nr	= I2C_CLK,
+// 	.irq_nr = INT_PWB_I2C,
+// 	.scl_gpio = GPIO_I2C_CLK,
+// 	.sda_gpio = GPIO_I2C_DAT,
+// 	.set_mux_to_i2c = &msm_set_i2c_mux,
+// 	.i2c_base = (void*)MSM_I2C_BASE,
+// };
+
+// void msm_i2c_init(void)
+// {
+// 	msm_i2c_probe(&i2c_pdata);
+// }
+
+// /*******************************************************************************
+//  * MicroP
+//  ******************************************************************************/
+// int msm_microp_i2c_status = 0;
+// static struct microp_platform_data microp_pdata = {
+// 	.chip = MICROP_I2C_ADDR,
+// 	.gpio_reset = HTCLEO_GPIO_UP_RESET_N,
+// };
+
+// void msm_microp_i2c_init(void)
+// {
+// 	microp_i2c_probe(&microp_pdata);
+// }
 
 static unsigned num_parts = sizeof(board_part_list)/sizeof(struct ptentry);
 //#define part_empty(p) (p->name[0]==0 && p->start==0 && p->length==0 && p->flags==0 && p->type==0 && p->perm==0)
@@ -82,6 +129,8 @@ void target_init(void)
 
 	keys_init();
 	keypad_init();
+	// msm_i2c_init();
+	// msm_microp_i2c_init();
 
 	uint16_t keys[] = {
 			KEY_VOLUMEUP,
