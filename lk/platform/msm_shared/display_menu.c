@@ -40,6 +40,7 @@
 #include <sys/types.h>
 #include <../../../app/aboot/recovery.h>
 #include <version.h>
+#include <../../../app/aboot/fastboot.h>
 
 enum unlock_type {
 	UNLOCK = 0,
@@ -106,6 +107,8 @@ static const char *lock_menu_common_msg = "If you lock the bootloader, "\
 #define DELAY_5SEC 5000
 #define DELAY_10SEC 10000
 #define DELAY_30SEC 30000
+
+extern char* generate_serial_from_cid(const char* input);
 
 static bool is_thread_start = false;
 static struct select_msg_info msg_info;
@@ -254,14 +257,14 @@ void update_device_imei(void)
  * koko : Get device CID
  */
 char device_cid[24];
-void update_device_cid(void)
+char update_device_cid(void)
 {
 	char cidBuffer[24];
 	dump_mem_to_buf((char*)str2u("0x1EF270"), str2u("0x8"), cidBuffer);
 
 	hex2ascii(cidBuffer, device_cid);
 
-	return;
+	return device_cid;
 }
 
 /*
@@ -619,10 +622,23 @@ void display_fastboot_menu_renew(struct select_msg_info *fastboot_msg_info)
 	 	radio_version);
 	 display_fbcon_menu_message(msg, FBCON_COMMON_MSG, common_factor, 0);
 
+	 	memset(msg_buf, 0, sizeof(msg_buf));
+	//target_serialno((unsigned char *) msg_buf);
+	snprintf(msg, sizeof(msg), "DEVICE CID - %s\n", device_cid);
+	display_fbcon_menu_message(msg, FBCON_COMMON_MSG, common_factor, 0);
+
+	
+
+	//normal one is HTC__023
+	//Display broken one is 02__102
+	//TMO one is T-MOB101
+	char* deviceSerial = generate_serial_from_cid(device_cid);
 	memset(msg_buf, 0, sizeof(msg_buf));
 	//target_serialno((unsigned char *) msg_buf);
-	snprintf(msg, sizeof(msg), "SERIAL NUMBER - %s\n", "#123456A");
+	snprintf(msg, sizeof(msg), "SERIAL NUMBER - %s\n", deviceSerial);
 	display_fbcon_menu_message(msg, FBCON_COMMON_MSG, common_factor, 0);
+
+	fastboot_publish("serialno", deviceSerial);
 
 	snprintf(msg, sizeof(msg), "SECURE BOOT - %s\n","disabled");
 	display_fbcon_menu_message(msg, FBCON_COMMON_MSG, common_factor, 0);
