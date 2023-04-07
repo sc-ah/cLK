@@ -12,6 +12,8 @@
 #include <smem.h>
 #include <platform/iomap.h>
 #include <reg.h>
+#include <stdio.h>
+#include <stdlib.h>
 // #include <target/microp.h>
 // #include <target/board_htcleo.h>
 // #include <platform/gpio.h>
@@ -21,9 +23,11 @@
 // #include <pcom.h>
 
 #include "version.h"
+#include <pcg_basic.h>
 
 #define LINUX_MACHTYPE  2524
 #define HTCLEO_FLASH_OFFSET	0x219
+#define OUTPUT_LEN = 10;
 
 struct ptable flash_ptable;
 
@@ -145,7 +149,7 @@ void target_init(void)
 	for(unsigned i = 0; i < sizeof(keys)/sizeof(uint16_t); i++)
 		if (keys_get_state(keys[i]) != 0) {
 			display_init();
-			display_lk_version();
+			//display_lk_version();
 			break;
 		}
 	dprintf(INFO, "htcleo_init\n");
@@ -217,6 +221,51 @@ void display_lk_version()
 {
     _dputs("cedesmith's LK (CLK) v" CLK_VERSION "\n");
 }
+
+#define FNV_PRIME_32 16777619
+#define FNV_OFFSET_32 2166136261U
+
+uint32_t fnv1a_32(const char* str, size_t len) {
+    uint32_t hash = FNV_OFFSET_32;
+    for (size_t i = 0; i < len; i++) {
+        hash ^= (uint32_t)str[i];
+        hash *= FNV_PRIME_32;
+    }
+    return hash;
+}
+
+char* generate_serial_from_cid(const char* input) {
+    char* result = malloc(12 * sizeof(char));
+    pcg32_random_t rng;
+    uint32_t seed = fnv1a_32(input, strlen(input));
+    pcg32_srandom_r(&rng, seed, 0);
+    const char* chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    int j = 0;
+    for (int i = 0; i < 11; i++) {
+        char c;
+        if (j < strlen(input) && (input[j] == '-' || input[j] == '_')) {
+            j++;
+        }
+        if (j < strlen(input)) {
+            c = input[j];
+            j++;
+        } else {
+            c = chars[pcg32_boundedrand_r(&rng, 36)];
+        }
+        result[i] = c;
+    }
+    result[11] = '\0';
+    if (strstr(result, "_")) {
+        for (int i = 0; i < 11; i++) {
+            if (result[i] == '_') {
+                result[i] = chars[pcg32_boundedrand_r(&rng, 36)];
+                break;
+            }
+        }
+    }
+    return result;
+}
+
 struct fbcon_config* fbcon_display(void);
 void htcleo_fastboot_init()
 {
@@ -227,7 +276,7 @@ void htcleo_fastboot_init()
 	// display not initialized
 	if(fbcon_display() == NULL) {
 		display_init();
-		display_lk_version();
+		//display_lk_version();
 		htcleo_ptable_dump(&flash_ptable);
 	}
 
