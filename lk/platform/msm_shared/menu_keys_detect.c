@@ -653,8 +653,7 @@ static int ui_key_repeater(void *arg)
 
 int ui_key_listener_thread(void *param)
 {
-	dprintfr(INFO, "UI_KEY_LISTENER: %u", optionindex);
-	for (;;)
+		for (;;)
 	{
         for(uint16_t i = 0; i < sizeof(keys_htcleo)/sizeof(uint16_t); i++)
 		{
