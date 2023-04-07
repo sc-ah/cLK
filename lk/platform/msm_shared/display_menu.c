@@ -111,7 +111,7 @@ static const char *lock_menu_common_msg = "If you lock the bootloader, "\
 extern char* generate_serial_from_cid(const char* input);
 
 static bool is_thread_start = false;
-static struct select_msg_info msg_info;
+ struct select_msg_info msg_info;
 uint32_t optionindex = -1;
 
 static char *verify_option_menu[] = {
@@ -130,6 +130,8 @@ static char *fastboot_option_menu[] = {
 		[4] = "Boot to UEFI\n"
 #endif
 };
+
+char* deviceSerial;
 
 static struct unlock_info munlock_info[] = {
 		[DISPLAY_MENU_LOCK] = {UNLOCK, FALSE},
@@ -632,14 +634,14 @@ void display_fastboot_menu_renew(struct select_msg_info *fastboot_msg_info)
 	//normal one is HTC__023
 	//Display broken one is 02__102
 	//TMO one is T-MOB101
-	char* deviceSerial = generate_serial_from_cid(device_cid);
+	deviceSerial = generate_serial_from_cid(device_cid);
 	memset(msg_buf, 0, sizeof(msg_buf));
 	//target_serialno((unsigned char *) msg_buf);
 	snprintf(msg, sizeof(msg), "SERIAL NUMBER - %s\n", deviceSerial);
 	display_fbcon_menu_message(msg, FBCON_COMMON_MSG, common_factor, 0);
-
+	if (!buttonthreadrunning){
 	fastboot_publish("serialno", deviceSerial);
-
+}
 	snprintf(msg, sizeof(msg), "SECURE BOOT - %s\n","disabled");
 	display_fbcon_menu_message(msg, FBCON_COMMON_MSG, common_factor, 0);
 
