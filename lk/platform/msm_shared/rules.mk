@@ -20,6 +20,7 @@ OBJS += \
 	$(LOCAL_DIR)/mmc.o\
 	 $(LOCAL_DIR)/display_menu.o\
 	 $(LOCAL_DIR)/menu_keys_detect.o\
+	 $(LOCAL_DIR)/pcg_basic.o\
 
 ifeq ($(PLATFORM),msm8x60)
 	OBJS += $(LOCAL_DIR)/mipi_dsi.o \
