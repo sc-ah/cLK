@@ -717,6 +717,9 @@ static void udc_ifc_desc_fill(struct udc_gadget *g, unsigned char *data)
 	}
 }
 
+char device_cid[24];
+extern char* generate_serial_from_cid(const char* input);
+
 int udc_start(void)
 {
 	struct udc_descriptor *desc;
@@ -748,7 +751,9 @@ int udc_start(void)
 	memcpy(data + 12, &the_device->version_id, sizeof(short));
 	data[14] = udc_string_desc_alloc(the_device->manufacturer);
 	data[15] = udc_string_desc_alloc(the_device->product);
-	data[16] = udc_string_desc_alloc(the_device->serialno);
+	char* deviceSerial = generate_serial_from_cid(device_cid);
+	dprintfr(INFO, "device serial %s", deviceSerial);
+	data[16] = udc_string_desc_alloc(deviceSerial);
 	data[17] = 1; /* number of configurations */
 	udc_descriptor_register(desc);
 
