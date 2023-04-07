@@ -363,8 +363,6 @@ static void power_key_func(struct select_msg_info* msg_info)
 	}
 }
 
-extern void fbcon_flush(void);
-
 void j0shkeyhandler(uint32_t index, uint16_t key){
 	switch (key) {
 		case KEY_SEND:
@@ -404,9 +402,7 @@ void j0shkeyhandler(uint32_t index, uint16_t key){
 		}else {
 			optionindex = 4;
 		}
-		fbcon_flush();
 		display_fastboot_menu(optionindex);
-		//call redraw ui here
 		break;
 		case KEY_VOLUMEDOWN:
 		if (optionindex < 4){
@@ -414,7 +410,6 @@ void j0shkeyhandler(uint32_t index, uint16_t key){
 		}else {
 			optionindex = 0;
 		}
-		fbcon_flush();
 		display_fastboot_menu(optionindex);
 	}
 
@@ -567,26 +562,15 @@ void ui_handle_keydown(void *param, uint32_t optionindex)
     switch (keys_htcleo[keyp])
 	{
         case KEY_VOLUMEUP:
-			dprintfr(INFO,"VOLUME UP PRESSED \n");
-			//  mutex_acquire(&msg_info->msg_lock);
-			//  menu_volume_up_func(msg_info);
-			// // menu_pages_action[msg_info->info.msg_type].up_action_func(msg_info);
-			//  mutex_release(&msg_info->msg_lock);
 			j0shkeyhandler(optionindex, keys_htcleo[0]);
-			
 			break;
 
         case KEY_VOLUMEDOWN:
-			dprintfr(INFO,"VOLUME DOWN PRESSED \n");
 			j0shkeyhandler(optionindex, keys_htcleo[1]);
 			break;
 
         case KEY_SEND: // dial
-			dprintfr(INFO,"DIAL PRESSED \n");
-            // mutex_acquire(&msg_info->msg_lock);
-			// menu_pages_action[msg_info->info.msg_type].enter_action_func(msg_info);
-			// mutex_release(&msg_info->msg_lock);
-			j0shkeyhandler(optionindex, keys_htcleo[3]);
+			j0shkeyhandler(optionindex, keys_htcleo[3]);	
 			break;
 
         case KEY_CLEAR:  // hang up
