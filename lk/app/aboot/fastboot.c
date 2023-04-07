@@ -32,6 +32,7 @@
 #include <kernel/thread.h>
 #include <kernel/event.h>
 #include <dev/udc.h>
+#include <version.h>
 
 void boot_linux(void *bootimg, unsigned sz);
 
@@ -233,9 +234,47 @@ int fastboot_write(void *buf, unsigned len)
 	return usb_write(buf, len);
 }
 
+static void getvar_all(void)
+{
+	struct fastboot_var *var;
+	char getvar_all[256];
+
+	for (var = varlist; var; var = var->next)
+	{
+		strlcpy((char *) getvar_all, var->name, sizeof(getvar_all));
+		strlcat((char *) getvar_all, ":", sizeof(getvar_all));
+		strlcat((char *) getvar_all, var->value, sizeof(getvar_all));
+		fastboot_info(getvar_all);
+		memset((void *) getvar_all, '\0', sizeof(getvar_all));
+	}
+	fastboot_okay("");
+}
+
+void fastboot_info(const char *reason)
+{
+	char response[512];
+
+	if (fastboot_state != STATE_COMMAND)
+		return;
+
+	if (reason == 0)
+		return;
+
+	snprintf((char *)response, 512, "INFO%s", reason);
+
+	usb_write(response, strlen((const char *)response));
+}
+
 static void cmd_getvar(const char *arg, void *data, unsigned sz)
 {
 	struct fastboot_var *var;
+
+
+	if (!strncmp("all", arg, strlen(arg)))
+	{
+		getvar_all();
+		return;
+	}
 
 	for (var = varlist; var; var = var->next) {
 		if (!strcmp(var->name, arg)) {
@@ -360,7 +399,7 @@ int fastboot_init(void *base, unsigned size)
 
 	fastboot_register("getvar:", cmd_getvar);
 	fastboot_register("download:", cmd_download);
-	fastboot_publish("version", "0.5");
+	fastboot_publish("version", CLK_VERSION);
 
 	thr = thread_create("fastboot", fastboot_handler, 0, DEFAULT_PRIORITY, 4096);
 	thread_resume(thr);
