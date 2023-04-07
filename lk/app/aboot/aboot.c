@@ -363,17 +363,6 @@ int boot_linux_from_flash(void)
 		}
 	}
 
-	if (flash_read(ptn, offset, buf, page_size)) {
-		dprintf(CRITICAL, "ERROR: Cannot read boot image header\n");
-		goto failed;
-	}
-	offset += page_size;
-
-	if (memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
-		dprintf(CRITICAL, "ERROR: Invaled boot image heador\n");
-		goto failed;
-	}
-
 	n = ROUND_TO_PAGE(hdr->kernel_size, page_mask);
 	if (flash_read(ptn, offset, (void *)hdr->kernel_addr, n)) {
 		dprintf(CRITICAL, "ERROR: Cannot read kernel image\n");
