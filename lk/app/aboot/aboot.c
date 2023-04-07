@@ -561,10 +561,6 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 
 	if (!strcmp(ptn->name, "boot") || !strcmp(ptn->name, "recovery")
 			|| !strcmp(ptn->name, "uefi")) {
-		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
-			fastboot_fail("image is not a boot image");
-			return;
-		}
 	}
 
 	if (!strcmp(ptn->name, "system") || !strcmp(ptn->name, "userdata")
@@ -641,6 +637,8 @@ void splash_screen ()
 	}
 }
 
+extern char* generate_serial_from_cid(const char* input);
+extern char update_device_cid(void);
 void aboot_init_fastboot(unsigned usb_init)
 {
 	htcleo_fastboot_init();
