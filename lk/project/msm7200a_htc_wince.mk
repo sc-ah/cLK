@@ -5,7 +5,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 TARGET := msm7200a_htc_wince
 
 #MODULES += app/pooploader
-MODULES += app/aboot
+MODULES += app/aboot-kovsky
 
 DEFINES += WITH_DEBUG_DCC=0
 DEFINES += WITH_DEBUG_UART=0
