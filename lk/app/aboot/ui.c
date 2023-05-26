@@ -392,7 +392,7 @@ void ui_clear_all(void)
 
 void init_ui(void)
 {
-	ui_clear_all();
+	//ui_clear_all();
 
 	/* config fb console, it has been set up in display_init() */
 	//
