@@ -1,0 +1,30 @@
+Q1. HTCFlasher version 2.0 was able to flash Hermes 1.x bootloaders.
+    Why has this feature been removed?
+
+A1. The Hermes was the first HTC device to use NBH in ROM format, the
+    Hermes 1.x SPL was a transition from old NBF to new NBH commands
+    and it has already been deprected by HTC. You should seriously
+    consider upgrading your SPL to a newer version.
+
+
+Q2. HTCFlasher version 2.0 was able to flash RAW radio ROM accessing
+    the radio bootloader directly. Why has this feature been removed?
+
+A2. Flashing radio code is the most easy way to brick a qualcomm radio
+    based device. New non-MFG SPLs do not have 'rtask' support and this
+    you should be able to pack your radio in a NBH file and flash it.
+    
+
+Q3. HTCFlasher version 2.0 was able to dump NAND using 'rbmc'.
+    why has this feature been removed?
+
+A3. The 'rbmc' command is not present on most new SPL versions. And the
+    resulting dumped file was not useful to flash again.
+
+
+Q4. HTCFlasher version 3.0 had win32 support. Why 3.1 doesn't?
+
+A4. The win32 support was experimental and never worked as it should.
+    The only useful feature of HTCFlasher for win32 was NBH extracting,
+    this has now been merged into yang, and win32 native binaries for
+    yang are provided in the download page.

@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+#  Linux Rom Kitchen launcher script
+#
+#  Copyright (C) 2007-2008 Pau Oliva Fora - <pof@eslack.org>
+#
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by the
+#  Free Software Foundation; either version 3 of the License, or (at your
+#  opinion) any later version. See <http://www.gnu.org/licenses/gpl.html>
+#
+
+
+if ! [ -e /usr/share/LinuxRomKitchen/lrk-preload ]; then
+	echo "ERROR: Linux Rom Kitchen is not properly installed"
+	exit 1
+fi
+
+source /usr/share/LinuxRomKitchen/lrk-preload
+
+case $1 in
+	"-cabextract")
+		echo "Extracting NBH from $2"
+		mkdir -p ~/LRK/NBH/
+		cabextract "$2" -d ~/LRK/NBH/ > ~/.lrk/lrk.log 2>&1
+		cd ~/LRK/NBH/
+		rm *.dll *.exe *.fig *.cfg *.doc *.DLL *.EXE *.FIG *.CFG *.DOC 2>/dev/null
+	;;
+	"-osnbextract")
+		echo "Extracting ROM Contents from `basename $2`"
+		cd ~/LRK/
+		lrk-extract "$2" "$3" "$4" > ~/.lrk/lrk.log 2>&1
+		dos2unix ~/.lrk/lrk.log
+		echo "Done!"
+	;;
+	"-osnbbuild")
+		echo "Creating cooked OS.nb"
+		cd ~/LRK/
+		rm os-new.nb 2>/dev/null
+		lrk-build os-new.nb > ~/.lrk/lrk.log 2>&1
+		dos2unix ~/.lrk/lrk.log
+		if [ -e os-new.nb ]; then
+			zenity --info --text="os-new.nb created successfully"
+		else
+			zenity --error --text="Unable to create os-new.nb, please check log window"
+		fi
+		echo "Done!"
+	;;
+	"-nbhextract")
+		echo "Extracting NB from $2"
+		mkdir -p ~/LRK/NBH/
+		cd ~/LRK/NBH/
+		/usr/bin/yang -X "$2" > ~/.lrk/lrk.log 2>&1
+	;;
+	"-packages")
+		echo "Adding Custom Packages to ROM"
+		/usr/share/LinuxRomKitchen/lrk-packages > ~/.lrk/lrk.log 2>&1
+		if [ $? != 0 ]; then
+			zenity --error --text="Problem adding packages, please check log window"
+		fi
+	;;
+	"-newproject")
+		echo "Cleanning up kitchen"
+		rm -rf $HOME/.lrk/Temp/ $HOME/.lrk/initflashfiles.txt $HOME/.lrk/pkginst.txt $HOME/.lrk/pkglist.txt $HOME/.lrk/rominfo.txt $HOME/.lrk/NBSPLITOPTS $HOME/.lrk/reg/ $HOME/LRK/NBH/ $HOME/LRK/os-new.nb $HOME/LRK/Packages_Install/ $HOME/LRK/ROM/ $HOME/LRK/SYS/ > ~/.lrk/lrk.log 2>&1
+		source /usr/share/LinuxRomKitchen/lrk-preload
+	;;
+	"-saveproject")
+		echo "Saving current project"
+		DATE=`date +%Y%m%d%H%M%S`
+		mkdir -p $HOME/LRK/SavedProjects/
+		cd $HOME
+		tar cfz LRK-$DATE.tgz .lrk/initflashfiles.txt .lrk/reg/ .lrk/rominfo.txt .lrk/pkginst.txt .lrk/pkglist.txt .lrk/NBSPLITOPTS LRK/Packages_Install/ LRK/os-new.nb LRK/ROM/ LRK/SYS/ LRK/NBH/ > ~/.lrk/lrk.log 2>&1
+		mv $HOME/LRK-$DATE.tgz $HOME/LRK/SavedProjects/
+		if [ $? != 0 ]; then
+			zenity --error --text="Problem saving current project, please check log window"
+		else
+			zenity --info --text="LRK-$DATE.tgz saved successfully"
+		fi
+	;;
+	"-loadproject")
+		echo "Loading project `basename $2`"
+		cd $HOME
+		rm -rf .lrk/ LRK/Packages_Install LRK/os-new.nb LRK/ROM/ LRK/SYS/ LRK/NBH/
+		mkdir -p .lrk/
+		tar zxfp "$2" > ~/.lrk/lrk.log 2>&1
+		if [ $? != 0 ]; then
+			zenity --error --text="Problem loading project, please check log window"
+		else
+			zenity --info --text="Project loaded successfully"
+		fi
+	;;
+	*)
+		echo "Invalid option"
+	;;
+esac

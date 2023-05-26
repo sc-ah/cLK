@@ -45,13 +45,18 @@ void save(char* file, int nb);
 int blocks(size_t bytes);
 void PartSetCHS(struct PartEntry* part);
 
+    char* nbhFile;
+    char* binFile;
+
 int main(int argc, char* argv[])
 {
 	printf("nbgen v1.0 by cedesmith\n");
-	if(argc<2){
+	if(argc<4){
 		fprintf(stderr, "	Usage: os.nb|os.payload\n", argv[0]);
 		return 1;
 	}
+	nbhFile = argv[2];
+	binFile = argv[3];
 
 	struct stat st;
 	if(stat("lk.bin", &st)!=0){
@@ -90,6 +95,15 @@ int main(int argc, char* argv[])
 	save(argv[1], nb);
 	return 0;
 }
+
+void extract() {
+	struct stat st;
+	if(stat(nbhFile, &st)!=0){
+		fprintf(stderr, "%s not found\n", nbhFile);
+		return 3;
+	}
+}
+
 void PartSetCHS(struct PartEntry* part)
 {
 	uint32_t first=part->StartSector, last=part->StartSector+part->TotalSectors-1;

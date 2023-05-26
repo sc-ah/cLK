@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=yang
+Comment=Yet another NBH generator
+Exec=/usr/bin/yangGUI
+Icon=/usr/share/icons/yang.png
+Terminal=false
+Type=Application
+Categories=Utility;Application;

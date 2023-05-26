@@ -1,0 +1,222 @@
+#!/bin/bash
+#
+#  Linux Rom Kitchen Extract script
+#
+#  Copyright (C) 2007-2008 Pau Oliva Fora - <pof@eslack.org>
+#
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by the
+#  Free Software Foundation; either version 3 of the License, or (at your
+#  opinion) any later version. See <http://www.gnu.org/licenses/gpl.html>
+#
+
+TOOLS="/usr/share/LinuxRomKitchen/"
+CURRENTDIR=`pwd`
+
+if ! [ -f $HOME/.lrk/NBSPLITOPTS ]; then
+	echo "-kaiser" > $HOME/.lrk/NBSPLITOPTS
+fi
+NBSPLITOPTS=`cat ~/.lrk/NBSPLITOPTS`
+
+
+if [ -z $1 ]; then
+	echo "USAGE: lrk-extract <OS.nb> [Part01.raw] [Part02.raw]"
+	exit 1
+fi
+
+# check that no SYS & ROM exist in CURRENTDIR
+
+if [ -d SYS ]; then
+	echo "ERROR: SYS folder already exists in $CURRENTDIR"
+	exit 1
+fi
+
+if [ -d ROM ]; then
+	echo "ERROR: ROM folder already exists in $CURRENTDIR"
+	exit 1
+fi
+
+echo "Preparing..."
+rm -rf ~/.lrk/Temp/ 2>/dev/null
+mkdir -p ~/.lrk/Temp/
+cp $1 ~/.lrk/Temp/OS.nb
+
+if [ $? != 0 ]; then
+	echo "ERROR: Can't copy $1"
+	exit 1
+fi
+
+cd ~/.lrk/Temp
+
+if ! [ -z $2 ]; then
+	cp $2 ~/.lrk/xip.bin
+	cp $3 ~/.lrk/imgfs.bin
+else
+	if [ $NBSPLITOPTS != "-athena" ]; then
+		nbsplit $NBSPLITOPTS ./OS.nb |tee log.dump
+		if [ $? != 0 ]; then
+			echo "ERROR: NBSplit failed, check that nbplit options are correct in kitchen preferences"
+			exit 1
+		fi
+	else
+		cp ./OS.nb ./OS.nb.payload
+	fi
+	ImgfsFromNb OS.nb.payload imgfs.bin >> log.dump
+fi
+
+wine $TOOLS/ImgfsToDump.exe imgfs.bin >> log.dump
+mv dump dump_imgfs
+
+if [ $? != 0 ]; then
+	echo "ERROR: can't create imgfs dump"
+	exit 1
+fi
+
+if [ -z $2 ]; then
+	wine $TOOLS/RomMaster.exe -x -w 5 -b 0x320000 OS.nb.payload -o xip.bin
+	if ! [ -e xip.bin ]; then
+		wine $TOOLS/RomMaster.exe -x -w 5 -b 0x310000 OS.nb.payload -o xip.bin
+	fi
+fi
+
+mkdir XIP
+wine $TOOLS/dumprom.exe xip.bin -5 -d XIP
+mv dump dump_xip
+
+if [ $? != 0 ]; then
+	echo "ERROR: can't create XIP dump"
+	exit 1
+fi
+
+cd XIP
+#Access is Denied workaround
+find ../dump_xip/ -type d |xargs -n 1 basename |xargs -n 1 rm 2>/dev/null
+mv * ../dump_xip/
+cd ..
+rm -rf XIP
+
+### CopyROMXIP
+cp -R dump_xip/* dump_imgfs/ 2>/dev/null
+mkdir ROM
+mv OS.nb ROM/
+mv dump_xip XIP
+mv XIP ROM/
+
+if [ $? != 0 ]; then
+	echo "ERROR: can't copy ROM XIP"
+	exit 1
+fi
+
+# extracting registry hives
+echo "Extracting registry hives"
+cd dump_imgfs
+rm -rf ~/.lrk/reg/ 2>/dev/null
+mkdir -p ~/.lrk/reg/
+export _FLATRELEASEDIR=.
+wine $TOOLS/rgucomp.exe -nologo -o default.hv > ~/.lrk/reg/default.txt
+wine $TOOLS/rgucomp.exe -nologo -o user.hv > ~/.lrk/reg/user.txt
+wine $TOOLS/rgucomp.exe -nologo -o boot.hv > ~/.lrk/reg/boot.txt
+dos2unix ~/.lrk/reg/*
+dos2unix ~/.lrk/reg/*
+
+# BuildOS
+echo "Building OS packages in SYS folder, please wait"
+echo "[Core OS]" > ~/.lrk/rominfo.txt
+echo "  Windows Mobile-based Pocket PCs" >> ~/.lrk/rominfo.txt
+echo >> ~/.lrk/rominfo.txt
+echo "[Missing Files]" >> ~/.lrk/rominfo.txt
+for f in `ls *.dsm` ; do
+	dsminfo $f > $f.dsminfo
+	len=`cat $f.dsminfo |wc -l`
+	PKGNAME=`cat $f.dsminfo |head -n 1 |cut -f 2 -d " "`
+	#echo "Processing $PKGNAME - $f"
+	mkdir -p "../SYS/$PKGNAME"
+	if [ $len -gt 50 ]; then
+		sleep 1 # to avoid cat broken pipe
+	fi
+	for i in `seq 2 $len`; do
+		file=`cat $f.dsminfo |head -n $i |tail -n 1`
+		mv "$file" "../SYS/$PKGNAME/" 2>/dev/null
+		if [ $? != 0 ]; then
+			echo "  $PKGNAME: $file" >> ~/.lrk/rominfo.txt
+		fi
+	done
+	mv $f "../SYS/$PKGNAME/"
+	rm $f.dsminfo
+done
+
+# special packages
+mv .ROM ../SYS/
+mv .VM ../SYS/
+
+if [ $? != 0 ]; then
+	echo "ERROR: ROM package creation failed"
+	exit 1
+fi
+
+cd ..
+
+# generating rom info
+echo >> ~/.lrk/rominfo.txt
+echo "Generating rom info, please wait"
+echo "[Versions]" >> ~/.lrk/rominfo.txt
+### find romversion in provxml file
+OEMVERSIONFILE=`find ./SYS/OEM* -iname "mxipupdate_OEMVERSION*"`
+ROMVERSION=`cat $OEMVERSIONFILE |grep -i ROMVersion |sed -e 's/.*value="//g' |cut -f 1 -d '"' |head -n 1`
+if ! [ -z $ROMVERSION ]; then
+	echo "  ROM:   $ROMVERSION" >> ~/.lrk/rominfo.txt
+fi
+for f  in `find ./SYS/ -iname "*.dsm" |grep -v OEM |grep -v NetCF` ; do dsminfo $f -v |grep PackageVersion |grep -v "0.0.0.0" |sed -e "s/PackageVersion/  SYS/g"; done |sort -u >> ~/.lrk/rominfo.txt
+for f  in `find ./SYS/NetCF/ -iname "*.dsm"` ; do dsminfo $f -v |grep PackageVersion |grep -v "0.0.0.0" |sed -e "s/PackageVersion/  NET/g"; done |sort -u >> ~/.lrk/rominfo.txt
+for f  in `find ./SYS/OEM*/ -iname "*.dsm"` ; do dsminfo $f -v |grep PackageVersion |grep -v "0.0.0.0" |sed -e "s/PackageVersion/  OEM/g"; done |sort -u >> ~/.lrk/rominfo.txt
+echo >> ~/.lrk/rominfo.txt
+echo "[Language]" >> ~/.lrk/rominfo.txt
+LANG=`ls ./SYS/ |grep "_Lang_....$" |rev |cut -c 1-4 |rev |sort -u`
+case $LANG in
+	"0409") LANG="$LANG - WWE English (United States)" ;;
+	"0804") LANG="$LANG - CHS Chinese Simplified" ;;
+	"0404") LANG="$LANG - CHT Chinese Traditional" ;;
+	"0405") LANG="$LANG - CSY Czech" ;;
+	"0406") LANG="$LANG - DAN Danish" ;;
+	"0413") LANG="$LANG - NLD Dutch" ;;
+	"0409") LANG="$LANG - USA English" ;;
+	"0407") LANG="$LANG - GER German" ;;
+	"0408") LANG="$LANG - ELL Greek" ;;
+	"040b") LANG="$LANG - FIN Finnish" ;;
+	"040c") LANG="$LANG - FRA French" ;;
+	"040e") LANG="$LANG - HUN Hungarian" ;;
+	"0410") LANG="$LANG - ITA Italian" ;;
+	"0411") LANG="$LANG - JPN Japanese" ;;
+	"0412") LANG="$LANG - KOR Korean" ;;
+	"0414") LANG="$LANG - NOR Norwegian" ;;
+	"0415") LANG="$LANG - PLK Polish" ;;
+	"0416") LANG="$LANG - PTB Portuguese Brazil" ;;
+	"0816") LANG="$LANG - PTG Portuguese Portugal" ;;
+	"0418") LANG="$LANG - ROM Romanian" ;;
+	"0419") LANG="$LANG - RUS Russian" ;;
+	"041b") LANG="$LANG - SKY Slovak" ;;
+	"0c0a") LANG="$LANG - ESN Spanish" ;;
+	"041d") LANG="$LANG - SVE Swedish" ;;
+	"041f") LANG="$LANG - TRK Turkish" ;;
+esac
+echo "  $LANG"  >> ~/.lrk/rominfo.txt
+echo >> ~/.lrk/rominfo.txt
+echo "[DPI]" >> ~/.lrk/rominfo.txt
+DPI=`ls ./SYS/ |grep DPI |grep -vi res |rev |cut -f 1 -d "_" |rev |sort -u`
+echo "  $DPI"  >> ~/.lrk/rominfo.txt
+
+
+echo "Cleaning up..."
+mv SYS ROM "$CURRENTDIR"
+cd "$CURRENTDIR"
+rm -rf ~/.lrk/Temp/ 2>/dev/null
+
+# convert initflashfiles to text
+INFF=`find ${CURRENTDIR}/SYS/OEM* -iname "initflashfiles.dat"`
+if [ -z $INFF ]; then
+	echo "ERROR: Initflashfiles not found"
+	exit 1
+fi
+iconv -f utf16 -t iso-8859-15 $INFF > ~/.lrk/initflashfiles.txt
+
+echo "Done!"

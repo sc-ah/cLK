@@ -48,4 +48,22 @@ int gpio_config(unsigned nr, unsigned flags);
 void gpio_set(unsigned nr, unsigned on);
 int gpio_get(unsigned nr);
 
+int gpio_config(unsigned nr, unsigned flags);
+void gpio_set(unsigned nr, unsigned on);
+int gpio_get(unsigned nr);
+
+#include <platform/interrupts.h>
+#include <sys/types.h>
+
+enum gpio_irq_trigger {
+	GPIO_IRQF_NONE,
+	GPIO_IRQF_RISING = 1,
+	GPIO_IRQF_FALLING = 2,
+	GPIO_IRQF_BOTH = GPIO_IRQF_RISING | GPIO_IRQF_FALLING,
+};
+
+void register_gpio_int_handler(unsigned gpio, int_handler handler, void *arg);
+status_t mask_gpio_interrupt(unsigned gpio);
+status_t unmask_gpio_interrupt(unsigned gpio, enum gpio_irq_trigger detect);
+
 #endif

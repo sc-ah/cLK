@@ -1,0 +1,138 @@
+#!/bin/bash
+#
+#  HTCFlasherGUI
+# 
+#  Copyright (C) 2007-2008 Pau Oliva Fora - <pof@eslack.org>
+#
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by the
+#  Free Software Foundation; either version 3 of the License, or (at your
+#  opinion) any later version. See <http://www.gnu.org/licenses/gpl.html>
+# 
+
+ZEN="zenity --name=HTCFlasher --title=HTCFlasher"
+TERMINAL="xterm -T HTCFlasher -e"
+#TERMINAL="gnome-terminal --hide-menubar --title=HTCFlasher -e"
+
+TMPF=/tmp/tmpfile.$$
+
+device="/dev/ttyUSB0"
+extracted=""
+flashed=""
+debug="NO"
+donate=""
+
+OPT1="Extract NBH file"
+OPT2="Generate NBH file"
+OPT3="Flash NBH file"
+OPT4="Get device info"
+OPT5="Bootloader Cmd prompt"
+OPT6="Serial port"
+OPT7="Show debug info"
+OPT8="Donate                      "
+
+options() {
+
+	FLA="HTCFlasher -z"
+
+	if [ "$debug" = "YES" ]; then 
+		FLA="$FLA -v"
+	fi
+
+	ans=$($ZEN --width 500 --height 360 --list  --text "HTCFlasher v3.1\nOpen Source RUU for HTC devices\n(c) 2007-2008 Pau Oliva Fora" --radiolist --column "" --column "Option" --column "" TRUE "$OPT1" "" FALSE "$OPT2" "$generated" FALSE "$OPT3" "$flashed" FALSE "$OPT4" "$devinfo" FALSE "$OPT5" "" FALSE "$OPT6" "[ $device ]" FALSE "$OPT7" "[ $debug ]" FALSE "$OPT8" "$donate")
+
+	if [ -z "$ans" ]; then
+		echo "bye :)"
+		exit 0
+	fi
+
+	if [ "$ans" = "$OPT1" ]; then
+		filename=$($ZEN --file-selection)
+		if [ -z "$filename" ]; then
+			return 1
+		fi
+		(( yang -X "$filename" 3>&2 2>&1 1>&3 |tee ) 3>&2 2>&1 1>&3 ) 2>&1 |tee $TMPF | $ZEN --progress --pulsate --auto-close --text="$OPT1" --width 400
+		cat $TMPF |grep -v "^===" |grep -v "ZENITY" | $ZEN --text-info --width 500 --height 430
+		rm $TMPF
+		filename=$(basename $filename)
+		extracted="Extracted '$filename'"
+	fi
+
+	if [ "$ans" = "$OPT2" ]; then
+		yangGUI
+	fi
+
+	if [ "$ans" = "$OPT3" ]; then
+		filename=$($ZEN --file-selection)
+		if [ -z "$filename" ]; then
+			return 1
+		fi
+		$ZEN --question --text="Flash file '$filename'?"
+		if [ $? == 0 ]; then
+			(( $FLA -D $device -F "$filename" 3>&2 2>&1 1>&3 |tee ) 3>&2 2>&1 1>&3 ) 2>&1 |tee $TMPF |$ZEN --progress --auto-close --text="$OPT3, please wait..." --width 400
+			cat $TMPF |grep -v "^===" |grep -v "ZENITY" | $ZEN --text-info --width 500 --height 430
+			rm $TMPF
+			filename=$(basename $filename)
+			flashed="Flashed '$filename'"
+		fi
+	fi
+
+	if [ "$ans" = "$OPT4" ]; then
+		(( $FLA -D "$device" -i 3>&2 2>&1 1>&3 |tee ) 3>&2 2>&1 1>&3 ) 2>&1 |tee $TMPF | $ZEN --progress --auto-close --text="$OPT4" --width 400
+		cat $TMPF |grep -v "^===" |grep -v "ZENITY" | $ZEN --text-info --width 400 --height 300
+		cid=$(cat $TMPF |grep "\[\] CID" |cut -f 3 -d " ")
+		modelid=$(cat $TMPF |grep "\[\] ModelID" |cut -f 3 -d " ")
+		rm $TMPF
+		devinfo=""
+                if [ -n "$cid" ] && [ -n "$modelid" ]; then
+                        devinfo="CID: [$cid] - ModelID: [$modelid]"
+                fi
+                if [ -n "$cid" ] && [ -z "$modelid" ]; then
+                        devinfo="CID: [$cid]"
+                fi
+                if [ -z "$cid" ] && [ -n "$modelid" ]; then
+                        devinfo="ModelID: [$modelid]"
+                fi
+		if [ -z "$devinfo" ]; then
+			devinfo="UNKNOWN DEVICE!"
+		fi
+	fi
+
+	if [ "$ans" = "$OPT5" ]; then
+		$TERMINAL "HTCFlasher -D $device -p ; read -p 'Press enter to close.'"
+		if [ $? != 0 ]; then
+			$ZEN --warning --text="TERMINAL is not properly set"
+		fi
+	fi
+
+	if [ "$ans" = "$OPT6" ]; then
+		oldport=$device
+		export device=$(zenity --entry --entry-text="$device" --text="Select serial port device to use")
+		if [ -z "$device" ]; then
+			device="$oldport"
+		fi
+		if [ ! -e "$device" ]; then
+			$ZEN --warning --text="Device '$device' doesn't exist"
+		fi
+	fi
+
+	if [ "$ans" = "$OPT7" ]; then
+		$ZEN --question --text="Enable verbose mode?"
+		if [ $? == 0 ]; then
+			debug="YES"
+		else
+			debug="NO"
+		fi
+	fi
+
+	if [ "$ans" = "$OPT8" ]; then
+		$ZEN --info --text="Opening PayPal donation page in Firefox\n\nThank you!"
+		firefox "https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=pau%40eslack%2eorg&item_name=HTCFlasher%20donation&no_shipping=1&cn=Comments&tax=0&currency_code=EUR&bn=PP%2dDonationsBF&charset=UTF%2d8"
+		donate=":)"
+	fi
+}
+
+while true
+do
+	options
+done

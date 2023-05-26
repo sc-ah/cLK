@@ -1,0 +1,116 @@
+#!/bin/bash
+#
+#  Linux Rom Kitchen Package Selector
+#
+#  Copyright (C) 2007-2008 Pau Oliva Fora - <pof@eslack.org>
+#
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by the
+#  Free Software Foundation; either version 3 of the License, or (at your
+#  opinion) any later version. See <http://www.gnu.org/licenses/gpl.html>
+#
+
+echo "Linux ROM Kitchen Package Selector"
+
+# Process packages folder:
+# 0) Copy folder from Packages to Packages_Installed
+# 1) Delete option.xml (from ervius kitchen packages)
+# 2) check if initflashfiles.txt exists (from ervius kitchen packages)
+#	2.1) if initflashfiles.txt is utf-16, convert it to ascii and concatenate our editable initflashfiles.txt
+#	2.2) if initflashfiles.txt is ascii, concatenate to our editable initflashfiles.txt
+#	2.2) delete initflashfiles.txt
+# 3) check if dsm file exists:
+#	3.1) yes: dsmbuild
+#	3.2) no: uuidgen/touch & dsmbuild
+#
+#
+
+if ! [ -e ~/.lrk/initflashfiles.txt ]; then
+	echo "ERROR: Please extract ROM packages first"
+	exit 1
+fi
+
+echo "Generating list of available packages..."
+
+cd $HOME/LRK/Packages/
+if [ $? != 0 ]; then
+	echo "ERROR: $HOME/LRK/Packages/ folder doesn't exist"
+	exit 1
+fi
+/bin/ls > ~/.lrk/pkglist.txt
+
+#cat ~/.lrk/pkglist.txt |sed -e 's/^/FALSE "/g' -e 's/$/"/g' > ~/.lrk/pkgmod.txt
+#RES=`cat ~/.lrk/pkgmod.txt`
+
+LEN=`cat ~/.lrk/pkglist.txt |wc -l`
+if [ $LEN -eq 0 ]; then
+	echo "ERROR: No packages in $HOME/LRK/Packages/"
+	exit 1
+fi
+
+echo "Creating package selection window..."
+RES=""
+for f in `seq 1 $LEN` ; do
+	PKG=`cat ~/.lrk/pkglist.txt |head -n $f |tail -n 1`
+	#if package is already selected, mark it true - but we have already messed initflashfiles!
+	if [ -e "$HOME/LRK/Packages_Install/$PKG" ]; then
+		RES="$RES TRUE \"$PKG\""
+	else
+		RES="$RES FALSE \"$PKG\""
+	fi
+done
+
+echo -n 'zenity --width 500 --height 500 --list --text "Select ROM packages to install" --checklist --column "Install" --column "Package name" ' > ~/.lrk/zen.sh
+echo $RES >> ~/.lrk/zen.sh
+RESULT=`bash ~/.lrk/zen.sh`
+rm ~/.lrk/zen.sh
+
+echo "Parsing package selection results"
+
+echo $RESULT |sed -e "s/|/\n/g" > ~/.lrk/pkginst.txt
+
+LEN=`cat ~/.lrk/pkginst.txt |grep -v "^$" |wc -l`
+if [ $LEN -eq 0 ]; then
+	echo "No packages selected."
+	exit 0
+fi
+
+rm -rf $HOME/LRK/Packages_Install/ 2>/dev/null
+mkdir -p $HOME/LRK/Packages_Install/
+cd $HOME/LRK/Packages_Install/
+if [ $? != 0 ]; then
+	echo "ERROR: Can't create $HOME/LRK/Packages_Install"
+	exit 1
+fi
+
+echo "Installing packages in ROM"
+
+for f in `seq 1 $LEN`; do
+	PKG=`cat ~/.lrk/pkginst.txt |head -n $f |tail -n 1`
+	echo "Processing $PKG"
+	cp -R "$HOME/LRK/Packages/$PKG/" .
+	cd "$PKG"
+	if [ $? != 0 ]; then
+		echo "ERROR: Problem processing $PKG"
+		exit 1
+	fi
+	rm option.xml 2>/dev/null
+	if [ -e initflashfiles.txt ]; then
+		iconv -f utf-16 -t iso-8859-15 initflashfiles.txt > initflashfiles.tmp
+		if [ $? != 0 ]; then
+			rm initflashfiles.tmp
+			cp initflashfiles.txt initflashfiles.tmp
+		fi
+		cat initflashfiles.tmp >> ~/.lrk/initflashfiles.txt
+		rm initflashfiles.txt initflashfiles.tmp
+	fi
+	DSM=`ls *.dsm`
+	if [ -z $DSM ]; then
+		DSM=`uuidgen`
+		DSM=${DSM}.dsm
+		touch $DSM
+	fi
+	cd ..
+	dsmbuild "$PKG"
+done
+echo "Done"

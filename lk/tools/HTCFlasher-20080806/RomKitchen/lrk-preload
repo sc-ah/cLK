@@ -1,0 +1,179 @@
+#!/bin/bash
+#
+#  Linux Rom Kitchen dependancy & sanity check script
+#
+#  Copyright (C) 2007-2008 Pau Oliva Fora - <pof@eslack.org>
+#
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by the
+#  Free Software Foundation; either version 3 of the License, or (at your
+#  opinion) any later version. See <http://www.gnu.org/licenses/gpl.html>
+#
+
+export VERSION=1.1
+
+TOOLS="/usr/share/LinuxRomKitchen"
+APPS="$TOOLS/rgucomp.exe $TOOLS/ImgfsFromDump.exe $TOOLS/ImgfsToNb.exe $TOOLS/ImgfsToDump.exe $TOOLS/NBMerge.exe $TOOLS/RomMaster.exe $TOOLS/dumprom.exe $TOOLS/cereg400.dll $TOOLS/cecompr_nt.dll $TOOLS/RecMod.exe"
+
+ZENITY=`which zenity`
+GTKDIALOG=""
+if [ "`which gtkdialog3`" != "" ]; then
+	GTKDIALOG=gtkdialog3
+elif [ "`which gtkdialog`" != "" ]; then
+	GTKDIALOG=gtkdialog
+fi
+
+error() {
+	export ERROR_DIALOG='
+	<window title="LRK: Error">
+	<vbox>
+	<hbox>
+	<pixmap><input file stock="gtk-dialog-error"></input></pixmap>
+	<text wrap="true" width-chars="55"><label>"'$1'"</label></text>
+	</hbox>
+	<hbox>
+	<button>
+	<input file stock="gtk-close"></input>
+	<label>Close</label>
+	<action type="closewindow">ERROR_DIALOG</action>
+	</button>
+	</hbox>
+	</vbox>
+	</window>
+	'
+	RESULT=`$GTKDIALOG --program=ERROR_DIALOG --center`
+	echo $1
+}
+
+# we need either zenity or gtkdialog to show GUI errors
+if [ -z "$GTKDIALOG" ] && [ -z $ZENITY ] ; then
+	echo "ERROR: gtkdialog and zenity are not installed"
+	exit 1
+fi
+
+if [ -z "$ZENITY" ]; then
+	error "ERROR: zenity is not installed"
+	exit 1
+fi
+
+if [ -z "$GTKDIALOG" ]; then
+	ERROR="ERROR: gtkdialog is not installed"
+	$ZENITY --error --text="$ERROR"
+	echo $ERROR
+	exit 1
+fi
+
+if ! [ -e $TOOLS ]; then
+	error "ERROR: $TOOLS does not exist"
+	exit 1
+fi
+
+for app in $APPS ; do
+	if ! [ -e $app ]; then
+		error "ERROR: LRK-tools is not installed!
+Download from http://www.eslack.org/pof/LRK/LRK-tools.tgz
+Copy the contents to $TOOLS"
+		exit 1
+	fi
+done
+
+if [ "`which wine`" = "" ]; then
+	error "ERROR: wine is not installed"
+	exit 1
+fi
+
+if [ "`which lcab`" = "" ]; then
+	error "ERROR: lcab is not installed
+Hint: http://lcab.move-to-cork.com/"
+	exit 1
+fi
+
+if [ "`which dsminfo`" = "" ]; then
+	error "ERROR: dsminfo is not installed
+Hint: Make sure you have installed latest version of htc-flasher"
+	exit 1
+fi
+
+if [ "`which dsmbuild`" = "" ]; then
+	error "ERROR: dsminfo is not installed
+Hint: Make sure you have installed latest version of htc-flasher"
+	exit 1
+fi
+
+if [ "`which nbsplit`" = "" ]; then
+	error "ERROR: nbsplit is not installed
+Hint: Make sure you have installed latest version of htc-flasher"
+	exit 1
+fi
+
+if [ "`which ImgfsFromNb`" = "" ]; then
+	error "ERROR: ImgfsFromNb is not installed
+Hint: Make sure you have installed latest version of htc-flasher"
+	exit 1
+fi
+
+if [ "`which sofbuild`" = "" ]; then
+	error "ERROR: sofbuild is not installed
+Hint: Make sure you have installed latest version of htc-flasher"
+	exit 1
+fi
+
+if [ "`which HTCFlasher`" = "" ]; then
+	error "ERROR: HTCFlasher is not installed
+Hint: Make sure you have installed latest version of htc-flasher"
+	exit 1
+fi
+
+if [ "`which yangGUI`" = "" ]; then
+	error "ERROR: yangGUI is not installed
+Hint: Make sure you have installed latest version of htc-flasher"
+	exit 1
+fi
+
+if [ "`which HTCFlasherGUI`" = "" ]; then
+	error "ERROR: HTCFlasherGUI is not installed
+Hint: Make sure you have installed latest version of htc-flasher"
+	exit 1
+fi
+
+if [ "`which cabextract`" = "" ]; then
+	error "ERROR: cabextract is not installed"
+	exit 1
+fi
+
+if [ "`which dos2unix`" = "" ]; then
+	error "ERROR: dos2unix is not installed"
+	exit 1
+fi
+
+if [ "`which iconv`" = "" ]; then
+	error "ERROR: iconv is not installed"
+	exit 1
+fi
+
+if ! [ -d ~/.lrk/ ]; then
+	mkdir -p ~/.lrk/
+fi
+
+if ! [ -d ~/LRK/ ]; then
+	mkdir -p ~/LRK/
+fi
+
+rm ~/.lrk/lrk.log 2>/dev/null
+
+INFF=`ls ~/LRK/SYS/OEM_Lang_*/initflashfiles.dat`
+if [ -z $INFF ]; then
+	INFF="$HOME/.lrk/initflashfiles.txt"
+	echo "Please extract ROM packages first!" > $INFF
+fi
+
+if ! [ -e $HOME/.lrk/rominfo.txt ]; then
+	echo "Please extract ROM packages first!" > ~/.lrk/rominfo.txt
+fi
+
+cd ~/LRK/
+
+if [ $? != 0 ]; then
+	error "Problem with kitchen project folder"
+	exit 1
+fi

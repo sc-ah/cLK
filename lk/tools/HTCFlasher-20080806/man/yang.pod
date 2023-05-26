@@ -1,0 +1,147 @@
+=head1 NAME
+
+yang - Yet Another NBH Generator
+
+=head1 SYNOPSIS
+
+yang -F <filename> -f <file1,file2,...> -t <type1,type2,...> -s <chunksize> -d <device> -c <CID> -v <version> -l <language>
+
+or
+
+yang -X <filename>
+
+
+=head1 DESCRIPTION
+
+Yang is a tool that allows to create custom NBH files from NB ROM parts.
+You can combine all the NB ROM parts and create a single NBH file ready to flash.
+The NBH files created using yang are not signed with the HTC certificate, so
+you'll need a method to bypass signature checking on your device bootloader.
+This is typically done using methods such as HardSPL, JumpSPL, USPL, etc. as
+published in xda-developers.com forum.
+
+Yang can also be used to extract the contents (ROM parts) found inside a NBH
+file. If the NBH contains a NB splash screen, it will also be converted to
+BMP format.
+
+=head1 OPTIONS
+
+=head2 Extract NBH Options:
+
+B<-X> Input NBH file name.
+
+=head2 Generate NBH Options:
+
+All options are mandatory. 
+
+B<-F> Output NBH file name.
+
+B<-f> Comma separated list of input NB files (ROM parts).
+
+B<-t> Comma separated list of input NB header types. Must be
+in the same order as the ROM parts. See the section NBH header types
+below for more information.
+
+B<-s> SignMaxChunkSize. This should be 64 or 1024 depending on the
+device. For example HTC Kaiser uses 64, and HTC Excalibur uses 1024.
+If you don't know which one uses your device, the best way is to extract
+the NBH from a shipped ROM, and generate it again using the extracted
+ROM parts. The generated NBH file size should match the original NBH
+file size. Try both values (64 and 1024) and see which one matches your
+device.
+
+B<-d> Device name or Model ID. This should match the one on your device,
+again extract a shipped NBH or use the Get Device Info option from HTCFlasher(1).
+
+B<-c> This should match the CID on your device, again extract a shipped NBH
+or use the Get Device Info option from HTCFlasher(1).
+
+B<-v> This is just a version number field. You can put whatever you want here.
+
+B<-l> This is just a language field, generally 3 letters, however you can put
+whatever you want here. Typical values are WWE for English, ESN for spanish,
+FRA for french, etc.
+
+=head1 NBH HEADER TYPES
+
+These are the typical values for most common NBH header types.
+
+IPL: 0x100, 0x101, 0x102
+
+SPL: 0x200
+
+GSM: 0x300, 0x301
+
+OS: 0x400, 0x401
+
+MainSplash: 0x600
+
+SubSplash: 0x601
+
+ExtROM: 0x700, 0x900
+
+To make sure you generate the NBH correctly for your device you should
+first extract the NBH file from a shipped ROM and get the header types
+for each file from the extracted file names.
+
+=head1 EXAMPLES
+
+Extract the contents from a NBH file:
+
+	yang -X RUU_signed.nbh
+
+Generate a NBH file containing only a Splash Screen, valid for any HTC Kaiser device:
+
+	yang -F RUU_signed.nbh -t 0x600 -f 00_MainSplash_0x600.nb -s 64 -d KAIS***** -c 11111111 -v 1.0 -l WWE
+
+Generate a NBH file containing a GSM radio firmware, an SPL, a Splash Screen and a WinCE OS image, valid for HTC Shift devices with CID HTC__017:
+
+	yang -F RUU_signed.nbh -t 0x301,0x200,0x600,0x400 -f GSM.nb,SPL.nb,Splash.nb,OS.nb -s 64 -d CLIO10000 -c HTC__017 -v 1.30.453.0 -l USA
+
+Generate a NBH file containing IPL, SPL, MainSplash, GSM, OS and unknown(0x800) files, for HTC Excalibur device:
+
+	yang -F RUU_signed.nbh -f 00_IPL_0x100.nb,01_SPL_0x200.nb,02_MainSplash_0x600.nb,03_GSM_0x300.nb,04_OS_0x400.nb,05_unknown_0x800.nb -t 0x100,0x200,0x600,0x300,0x400,0x800 -s 1024 -d EXCA20000 -c HTC__001 -v 1.11.405.4 -l ENG
+
+	=== yang v1.1: Yet Another NBH Generator
+	=== (c) 2008 Pau Oliva Fora - pof @ XDA-Developers
+
+	[] Output NBH file: RUU_unsigned.nbh
+	[] Input files: 00_IPL_0x100.nb,01_SPL_0x200.nb,02_MainSplash_0x600.nb,03_GSM_0x300.nb,04_OS_0x400.nb,05_unknown_0x800.nb
+	[] Input types: 0x100,0x200,0x600,0x300,0x400,0x800
+	[] SignMaxChunkSize: 1024
+	[] Device: EXCA20000
+	[] CID: HTC__001
+	[] Version: 1.11.405.4
+	[] Language: ENG
+
+	[] 0x100 --> 00_IPL_0x100.nb
+	[] 0x200 --> 01_SPL_0x200.nb
+	[] 0x600 --> 02_MainSplash_0x600.nb
+	[] 0x300 --> 03_GSM_0x300.nb
+	[] 0x400 --> 04_OS_0x400.nb
+	[] 0x800 --> 05_unknown_0x800.nb
+
+	Done!
+
+=head1 EXIT STATUS
+
+yang returns a zero exit status if it succeeds to
+execute the command. Non zero is returned in case of failure.
+
+=head1 AUTHOR
+
+Written by Pau Oliva Fora
+
+=head1 REPORTING BUGS
+
+Please report bugs here:
+http://code.google.com/p/htc-flasher/issues/list
+
+=head1 COPYRIGHT
+
+Copyright © 2008 Pau Oliva Fora.  License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
+
+=head1 SEE ALSO
+
+HTCFlasher(1)

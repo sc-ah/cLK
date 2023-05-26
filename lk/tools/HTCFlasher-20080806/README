@@ -1,0 +1,96 @@
+  __    __  ______   ____    ___
+ |  |__|  ||_    _| /  __|  |  _| |\   ___   ____ |\     ___   ___
+ |   __   |  |  |  |  |__  _| |_  | | /__ | / __/ | |_  / _ \ |  _|
+ |__|  |__|  |__|   \____||_   _| | | / _ | \__ \ |   ||  __/ | |
+                            | |   | ||___,_\/___/ |_|_| \___\ |_|
+                            | |   \_|                             v3.1
+                            | |
+                            |/
+ 
+ Introduction
+ ============
+
+ HTCflasher is a free (GPL'd) tool to work with HTC based bootloaders (SPLs).
+
+ Currently most new HTC devices are supported, and the basic set of functions
+ to work with every HTC bootloader has been implemented, so adding support
+ for new bootloader versions or new devices should be quite easy to do, if
+ not working out of the box.
+
+ Use it with CARE. If you don't know what you're doing you can brick your
+ device. Keep in mind that future / untested bootloaders can break backward
+ compatibility. USE IT AT YOUR OWN RISK.
+
+
+ Supported devices
+ =================
+
+ HTCflasher has been tested on the following devices:
+
+ * HTC Hermes: works on SPL versions >= 2.x
+ * HTC Trinity: works on all SPL versions
+ * HTC Kaiser: works on all SPL versions
+ * HTC Shangrila (Shift): works on all SPL versions
+ * HTC Polaris: works on all SPL versions
+ * HTC Elf: works on all SPL versions
+ * HTC Artemis: works on all SPL versions
+ * HTC Nike: works on all SPL versions
+
+ Not tested, but know to work on:
+
+ * HTC Cheetah (Treo 750)
+ * HTC Herald
+ * HTC Athena
+ * HTC Vogue
+ * HTC Titan
+ * HTC Gene
+ * HTC Pharaos
+ * HTC Juno
+ * HTC Sedna
+
+ Also should work on Smartphone platform:
+
+ * Excalibur, Monet, Oxygen, Vox, Wings, Cavalier, etc...
+
+ Can it be used in other new devices?
+
+ Probably yes, all new devices using NBH format for rom upgrades should be
+ supported out of the box, at least until HTC changes the SPL commands :)
+
+ Can it be used in other old devices?
+
+ Probably not, HTC Flasher v3 only supports devices using NBH ROM format,
+ if your device uses older NBF files it is currently not supported.
+
+ Your feedback/patches are more than welcome :)
+
+
+ Supported Operating Systems
+ ===========================
+
+ GNU/Linux x86 and x86_64 - fully supported
+ Intel Mac OS X - partially supported
+ win32 - partially supported
+
+
+ HTCflasher features
+ ===================
+
+    * Flash NBH files: replaces the Windows Rom Upgrade Utility (RUU)
+    * Serial prompt: replaces mtty / minicom
+
+ YANG features
+ =============
+
+    * Generate NBH files: replaces windows tools like htcrt
+    * Extract NBH files: replaces windows tools like nbhextract
+
+
+ INSTALLATION
+ ============
+ 
+ To compile from sources run 'make'.
+ To install run 'make install' as root.
+ To uninstall run 'make remove' as root.
+
+ For Linux ROM Kitchen, see the file RomKitchen/README.lrk 

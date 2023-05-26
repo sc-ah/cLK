@@ -41,13 +41,13 @@ int main(int argc, char* argv[]) {
 }
 
 void extract(char* nbhFile, char* binFile) {
-    FILE* nbh = fopen(nbhFile, "r");
+    FILE* nbh = fopen(nbhFile, "rb");
     if (nbh == NULL) {
         fprintf(stderr, "Failed to open %s\n", nbhFile);
         exit(1);
     }
 
-    FILE* bin = fopen(binFile, "w");
+    FILE* bin = fopen(binFile, "wb");
     if (bin == NULL) {
         fprintf(stderr, "Failed to create %s\n", binFile);
         exit(1);
@@ -73,42 +73,32 @@ void extract(char* nbhFile, char* binFile) {
     fclose(nbh);
     fclose(bin);
 
-    // Create a new file and write the modified content without the first 32 bytes and trailing 'F' bytes
-    FILE* extracted = fopen("extracted.bin", "w");
+    // Create a new file and write the modified content without the first 16 bytes
+    FILE* extracted = fopen("extracted.bin", "wb");
     if (extracted == NULL) {
         fprintf(stderr, "Failed to create extracted.bin\n");
         exit(1);
     }
 
-    bin = fopen(binFile, "r");
+    bin = fopen(binFile, "rb");
     if (bin == NULL) {
         fprintf(stderr, "Failed to open %s\n", binFile);
         exit(1);
     }
 
-    // Skip the first 32 bytes
+    // Skip the first 16 bytes
     fseek(bin, 16, SEEK_SET);
 
-    // Copy the modified content to the new file, excluding the first 32 bytes and trailing 'F' bytes
-    size_t bytesToWrite = totalBytesRead - 32;
+    // Copy the modified content to the new file, excluding the first 16 bytes
+    size_t bytesToWrite = totalBytesRead - 16;
     while (bytesToWrite > 0) {
         char byte = fgetc(bin);
-        if (byte != 'F') {
-            fputc(byte, extracted);
-            bytesToWrite--;
-        } else {
-            // Stop writing if 'F' bytes are encountered at the end
-            if (bytesToWrite == totalBytesRead - 32)
-                break;
-        }
+        fputc(byte, extracted);
+        bytesToWrite--;
     }
 
     fclose(bin);
     fclose(extracted);
-
-    // Remove the original binFile and rename the new file
-    remove(binFile);
-    rename("extracted.bin", binFile);
 }
 
 

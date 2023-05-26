@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=HTCFlasher
+Comment=ROM Upgrade Utility for HTC devices
+Exec=/usr/bin/HTCFlasherGUI
+Icon=/usr/share/icons/htcflasher.png
+Terminal=false
+Type=Application
+Categories=Utility;Application;

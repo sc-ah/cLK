@@ -1,0 +1,71 @@
+=head1 NAME
+
+HTCFlasher - Rom Update Utility (RUU) for HTC based devices
+
+=head1 SYNOPSIS
+
+HTCFlasher [-h] [-D device] [-F file] [-i] [-v] [-p]
+
+=head1 DESCRIPTION
+
+HTCFlasher is a tool that allows flashing ROMs on HTC based
+devices (PocketPC and SmartPhones). You have put your device in
+bootloader mode (tri-color screen), you usually do this by
+pressing a button combination (tipically camera button + soft
+reset). Once the device is in bootloader mode, connect it using
+the USB Sync cable to a free USB port. The device should be
+detected as '/dev/ttyUSB0' or similar, if not try loading the
+ipaq kernel module.
+
+Once the device is recognized, you can connect to the bootloader
+and issue commands, flash a new ROM upgrade, or get device
+information. 
+
+=head1 OPTIONS
+
+B<-h> display a short help text
+
+B<-D> use the given device instead of /dev/ttyUSB0
+
+B<-F> Flash a NBH upgrade file to the device
+
+B<-i> Get device information, usually the CID (Country ID) and
+the ModelID (short name identifying the device model)
+
+B<-v> Verbose mode. Shows a lot of debugging output.
+
+B<-p> Serial prompt. You can directly type commands to the
+bootloader. Type 'quit' to exit.
+
+=head1 EXAMPLES
+
+Get device information:
+
+          HTCFlasher -i
+
+Flash a NBH upgrade file in verbose mode:
+
+          HTCFlasher -v -F RUU_signed.nbh
+
+=head1 EXIT STATUS
+
+HTCFlasher returns a zero exit status if it succeeds to
+execute the command. Non zero is returned in case of failure.
+
+=head1 AUTHOR
+
+Written by Pau Oliva Fora
+
+=head1 REPORTING BUGS
+
+Please report bugs here:
+http://code.google.com/p/htc-flasher/issues/list
+
+=head1 COPYRIGHT
+
+Copyright © 2008 Pau Oliva Fora.  License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
+
+=head1 SEE ALSO
+
+HTCFlasherGUI(1), yang(1)

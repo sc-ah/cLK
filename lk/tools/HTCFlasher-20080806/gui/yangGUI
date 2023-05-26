@@ -1,0 +1,486 @@
+#!/bin/bash
+#
+#  yangGUI
+# 
+#  Copyright (C) 2007-2008 Pau Oliva Fora - <pof@eslack.org>
+#
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by the
+#  Free Software Foundation; either version 3 of the License, or (at your
+#  opinion) any later version. See <http://www.gnu.org/licenses/gpl.html>
+# 
+
+VERSION=1.1
+
+error() {
+	export yangERROR="
+	<window title=\"YANG-$VERSION \">
+	 <vbox>
+	  <text wrap=\"true\" width-chars=\"50\">
+	    <label>ERROR: $ERROR</label>
+	  </text>
+	  <hbox>
+	    <button>
+	       <input file icon=\"gtk-ok\"></input>
+	      <label>OK</label>
+	      <action type=\"exit\">Exit-now</action>
+	    </button>
+	  </hbox>
+	 </vbox>
+	</window>
+	"
+	$GTKDIALOG --program=yangERROR --center 2>&1 >/dev/null
+}
+
+GTKDIALOG=""
+if [ "`which gtkdialog3`" != "" ]; then
+	GTKDIALOG=gtkdialog3
+elif [ "`which gtkdialog`" != "" ]; then
+	GTKDIALOG=gtkdialog
+elif [ -z "$GTKDIALOG" ]; then
+	echo "Please make sure 'gtkdialog' is installed"
+	exit 1
+fi
+
+if [ "`which yang`" = "" ]; then
+	export ERROR="Please make sure 'yang' is properly installed"
+	error
+	exit 1
+fi
+
+if ! [ -d $HOME/.yang ]; then
+	mkdir -p $HOME/.yang
+fi
+if ! [ -f $HOME/.yang/MODELID ]; then
+	echo > $HOME/.yang/MODELID
+fi
+if ! [ -f $HOME/.yang/CID ]; then
+	echo "11111111" > $HOME/.yang/CID
+fi
+if ! [ -f $HOME/.yang/NBHVERSION ]; then
+	echo "1.00.000.0" > $HOME/.yang/NBHVERSION
+fi
+if ! [ -f $HOME/.yang/LANGUAGE ]; then
+	echo "WWE" > $HOME/.yang/LANGUAGE
+fi
+
+export yangGUI="
+<window title=\"YANG-$VERSION \">
+<hbox>
+<vbox>
+    <frame NBH Options>
+
+    <hbox>
+<frame Model ID:>
+      <entry>
+        <variable>MODELID</variable>
+	<input>cat \$HOME/.yang/MODELID</input>
+        <action>echo \$MODELID |tee \$HOME/.yang/MODELID</action>
+        <action>refresh:MODELID</action>
+      </entry>
+</frame>
+<frame CID:>
+      <entry>
+        <variable>CID</variable>
+        <input>cat \$HOME/.yang/CID</input>
+        <action>echo \$CID |tee \$HOME/.yang/CID</action>
+        <action>refresh:CID</action>
+      </entry>
+</frame>
+    </hbox>    
+
+    <hbox>
+<frame Version:>
+      <entry>
+        <variable>NBHVERSION</variable>
+        <input>cat \$HOME/.yang/NBHVERSION</input>
+        <action>echo \$NBHVERSION |tee \$HOME/.yang/NBHVERSION</action>
+        <action>refresh:NBHVERSION</action>
+      </entry>
+</frame>
+<frame Language:>
+      <entry>
+        <variable>LANGUAGE</variable>
+        <input>cat \$HOME/.yang/LANGUAGE</input>
+        <action>echo \$LANGUAGE |tee \$HOME/.yang/LANGUAGE</action>
+        <action>refresh:LANGUAGE</action>
+      </entry>
+</frame>
+    </hbox>    
+
+<frame>
+    <hbox>
+      <text><label>Sign Max Chunk Size: </label></text>
+      <hbox>
+      <radiobutton active=\"true\">
+        <label>64</label>
+        <variable>CHUNKSIZE64</variable>
+      </radiobutton>
+
+      <radiobutton active=\"false\">
+        <label>1024</label>
+        <variable>CHUNKSIZE1024</variable>
+      </radiobutton>
+      </hbox>
+    </hbox>
+</frame>
+
+    </frame>
+ 
+  <frame Save NBH file>
+    <hbox>
+      <entry accept=\"savefilename\">
+        <label>Select a Filename</label>
+        <variable>NBH_SAVEFILENAME</variable>
+      </entry>
+      <button>
+        <input file stock=\"gtk-open\"></input>
+        <action type=\"fileselect\">NBH_SAVEFILENAME</action>
+      </button>
+    </hbox>
+  </frame>
+
+
+    <hbox>
+    <button>
+      <input file icon=\"gtk-add\"></input>
+      <label>Add NB Files</label>
+      <action type=\"exit\">ADD_NBFILES</action>
+    </button>
+    <button>
+      <input file icon=\"gtk-quit\"></input>
+      <label>QUIT</label>
+      <action type=\"exit\">QUIT</action>
+    </button>
+    </hbox>
+
+
+
+</vbox>
+</hbox>
+</window>
+
+"
+
+export NBHTYPES="<item></item>
+<item>0x100 IPL</item>
+<item>0x101 G3IPL</item>
+<item>0x102 G4IPL</item>
+<item>0x200 SPL</item>
+<item>0x300 Radio</item>
+<item>0x301 Radio</item>
+<item>0x400 OS</item>
+<item>0x401 OS</item>
+<item>0x600 MainSplash</item>
+<item>0x601 SubSplash</item>
+<item>0x700 ExtROM</item>
+<item>0x900 ExtROM</item>
+<item>0x800 GPS</item>
+<item>0x810 GPS</item>
+"
+
+export yangADDNBFILES="
+<window title=\"YANG-$VERSION \">
+<hbox>
+<vbox>
+
+    <frame NBH contents>
+    <vbox>
+
+    <hbox>
+    <combobox>	
+     <variable>NBTYPE1</variable>
+     $NBHTYPES
+    </combobox>
+    <entry accept=\"filename\">
+      <variable>NBFILE1</variable>
+    </entry>
+    <button>
+      <input file stock=\"gtk-file\"></input>
+      <action type=\"fileselect\">NBFILE1</action>			
+    </button>
+    </hbox>
+
+    <hbox>
+    <combobox>	
+     <variable>NBTYPE2</variable>
+     $NBHTYPES
+    </combobox>
+    <entry accept=\"filename\">
+      <variable>NBFILE2</variable>
+    </entry>
+    <button>
+      <input file stock=\"gtk-file\"></input>
+      <action type=\"fileselect\">NBFILE2</action>			
+    </button>
+    </hbox>
+
+    <hbox>
+    <combobox>	
+     <variable>NBTYPE3</variable>
+     $NBHTYPES
+    </combobox>
+    <entry accept=\"filename\">
+      <variable>NBFILE3</variable>
+    </entry>
+    <button>
+      <input file stock=\"gtk-file\"></input>
+      <action type=\"fileselect\">NBFILE3</action>			
+    </button>
+    </hbox>
+
+    <hbox>
+    <combobox>	
+     <variable>NBTYPE4</variable>
+     $NBHTYPES
+    </combobox>
+    <entry accept=\"filename\">
+      <variable>NBFILE4</variable>
+    </entry>
+    <button>
+      <input file stock=\"gtk-file\"></input>
+      <action type=\"fileselect\">NBFILE4</action>			
+    </button>
+    </hbox>
+
+    <hbox>
+    <combobox>	
+     <variable>NBTYPE5</variable>
+     $NBHTYPES
+    </combobox>
+    <entry accept=\"filename\">
+      <variable>NBFILE5</variable>
+    </entry>
+    <button>
+      <input file stock=\"gtk-file\"></input>
+      <action type=\"fileselect\">NBFILE5</action>			
+    </button>
+    </hbox>
+
+    <hbox>
+    <combobox>	
+     <variable>NBTYPE6</variable>
+     $NBHTYPES
+    </combobox>
+    <entry accept=\"filename\">
+      <variable>NBFILE6</variable>
+    </entry>
+    <button>
+      <input file stock=\"gtk-file\"></input>
+      <action type=\"fileselect\">NBFILE6</action>			
+    </button>
+    </hbox>
+
+    <hbox>
+    <combobox>	
+     <variable>NBTYPE7</variable>
+     $NBHTYPES
+    </combobox>
+    <entry accept=\"filename\">
+      <variable>NBFILE7</variable>
+    </entry>
+    <button>
+      <input file stock=\"gtk-file\"></input>
+      <action type=\"fileselect\">NBFILE7</action>			
+    </button>
+    </hbox>
+
+    <hbox>
+    <combobox>	
+     <variable>NBTYPE8</variable>
+     $NBHTYPES
+    </combobox>
+    <entry accept=\"filename\">
+      <variable>NBFILE8</variable>
+    </entry>
+    <button>
+      <input file stock=\"gtk-file\"></input>
+      <action type=\"fileselect\">NBFILE8</action>			
+    </button>
+    </hbox>
+
+    </vbox>
+    </frame>
+		
+    <hbox>
+    <button>
+      <input file icon=\"gtk-yes\"></input>
+      <label>Create</label>
+      <action type=\"exit\">CREATENBH</action>
+    </button> 
+   
+    <button>
+      <input file icon=\"gtk-quit\"></input>
+      <label>QUIT</label>
+      <action type=\"exit\">QUIT</action>
+    </button>
+    </hbox>
+
+</vbox>
+</hbox>
+</window>
+"
+
+PROBLEM=1
+while [ $PROBLEM != 0 ]; do
+	RESULTS=`$GTKDIALOG --program=yangGUI --center`
+
+	CHUNKSIZE1024="`echo "$RESULTS" | grep CHUNKSIZE1024= | cut -f 2 -d '"' | sed 's/"//g'`"
+	CHUNKSIZE64="`echo "$RESULTS" | grep CHUNKSIZE64= | cut -f 2 -d '"' | sed 's/"//g'`"
+	CID="`echo "$RESULTS" | grep CID= | cut -f 2 -d '"' | sed 's/"//g'`"
+	LANGUAGE="`echo "$RESULTS" | grep LANGUAGE= | cut -f 2 -d '"' | sed 's/"//g'`"
+	MODELID="`echo "$RESULTS" | grep MODELID= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBHVERSION="`echo "$RESULTS" | grep NBHVERSION= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBH_SAVEFILENAME="`echo "$RESULTS" | grep NBH_SAVEFILENAME= | cut -f 2 -d '"' | sed 's/"//g'`"
+	EXIT="`echo "$RESULTS" | grep EXIT= | cut -f 2 -d '"' | sed 's/"//g'`"
+	PROBLEM=0
+
+	if [ "$EXIT" = "QUIT" ]; then
+		exit 0
+	fi
+	if [ "$EXIT" = "abort" ]; then
+		exit 0
+	fi
+	if [ "$CHUNKSIZE1024" = "true" ]; then
+		CHUNKSIZE="1024"
+	fi
+	if [ "$CHUNKSIZE64" = "true" ]; then
+		CHUNKSIZE="64"
+	fi
+	if [ -z "$CID" ]; then
+		export ERROR="CID can't be empty"
+		error
+		PROBLEM=1
+	fi
+	if [ -z "$LANGUAGE" ]; then
+		export ERROR="Language can't be empty"
+		error
+		PROBLEM=1
+	fi
+	if [ -z "$MODELID" ]; then
+		export ERROR="Device (Model ID) can't be empty"
+		error
+		PROBLEM=1
+	fi
+	if [ -z "$NBHVERSION" ]; then
+		export ERROR="Version can't be empty"
+		error
+		PROBLEM=1
+	fi
+	if [ -z "$NBH_SAVEFILENAME" ]; then
+		export ERROR="Missing output NBH Save filename"
+		error
+		PROBLEM=1
+	fi
+done
+
+PROBLEM=1
+while [ $PROBLEM != 0 ]; do
+
+	RESULTS=`$GTKDIALOG --program=yangADDNBFILES --center`
+
+	EXIT="`echo "$RESULTS" | grep EXIT= | cut -f 2 -d '"' | sed 's/"//g'`"
+	if [ "$EXIT" = "QUIT" ]; then
+		exit 0
+	fi
+	if [ "$EXIT" = "abort" ]; then
+		exit 0
+	fi
+
+	NBFILE1="`echo "$RESULTS" | grep NBFILE1= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBFILE2="`echo "$RESULTS" | grep NBFILE2= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBFILE3="`echo "$RESULTS" | grep NBFILE3= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBFILE4="`echo "$RESULTS" | grep NBFILE4= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBFILE5="`echo "$RESULTS" | grep NBFILE5= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBFILE6="`echo "$RESULTS" | grep NBFILE6= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBFILE7="`echo "$RESULTS" | grep NBFILE7= | cut -f 2 -d '"' | sed 's/"//g'`"
+	NBFILE8="`echo "$RESULTS" | grep NBFILE8= | cut -f 2 -d '"' | sed 's/"//g'`"
+
+	NBTYPE1="`echo "$RESULTS" | grep NBTYPE1= | cut -f 2 -d '"' | cut -f 1 -d " " | sed 's/"//g'`"
+	NBTYPE2="`echo "$RESULTS" | grep NBTYPE2= | cut -f 2 -d '"' | cut -f 1 -d " " | sed 's/"//g'`"
+	NBTYPE3="`echo "$RESULTS" | grep NBTYPE3= | cut -f 2 -d '"' | cut -f 1 -d " " | sed 's/"//g'`"
+	NBTYPE4="`echo "$RESULTS" | grep NBTYPE4= | cut -f 2 -d '"' | cut -f 1 -d " " | sed 's/"//g'`"
+	NBTYPE5="`echo "$RESULTS" | grep NBTYPE5= | cut -f 2 -d '"' | cut -f 1 -d " " | sed 's/"//g'`"
+	NBTYPE6="`echo "$RESULTS" | grep NBTYPE6= | cut -f 2 -d '"' | cut -f 1 -d " " | sed 's/"//g'`"
+	NBTYPE7="`echo "$RESULTS" | grep NBTYPE7= | cut -f 2 -d '"' | cut -f 1 -d " " | sed 's/"//g'`"
+	NBTYPE8="`echo "$RESULTS" | grep NBTYPE8= | cut -f 2 -d '"' | cut -f 1 -d " " | sed 's/"//g'`"
+
+	INPUTNB="$NBFILE1"
+	if [ -n "$NBFILE2" ]; then INPUTNB="$INPUTNB,$NBFILE2"; fi
+	if [ -n "$NBFILE3" ]; then INPUTNB="$INPUTNB,$NBFILE3"; fi
+	if [ -n "$NBFILE4" ]; then INPUTNB="$INPUTNB,$NBFILE4"; fi
+	if [ -n "$NBFILE5" ]; then INPUTNB="$INPUTNB,$NBFILE5"; fi
+	if [ -n "$NBFILE6" ]; then INPUTNB="$INPUTNB,$NBFILE6"; fi
+	if [ -n "$NBFILE7" ]; then INPUTNB="$INPUTNB,$NBFILE7"; fi
+	if [ -n "$NBFILE8" ]; then INPUTNB="$INPUTNB,$NBFILE8"; fi
+
+	INPUTTYPE="$NBTYPE1"
+	if [ -n "$NBTYPE2" ]; then INPUTTYPE="$INPUTTYPE,$NBTYPE2"; fi
+	if [ -n "$NBTYPE3" ]; then INPUTTYPE="$INPUTTYPE,$NBTYPE3"; fi
+	if [ -n "$NBTYPE4" ]; then INPUTTYPE="$INPUTTYPE,$NBTYPE4"; fi
+	if [ -n "$NBTYPE5" ]; then INPUTTYPE="$INPUTTYPE,$NBTYPE5"; fi
+	if [ -n "$NBTYPE6" ]; then INPUTTYPE="$INPUTTYPE,$NBTYPE6"; fi
+	if [ -n "$NBTYPE7" ]; then INPUTTYPE="$INPUTTYPE,$NBTYPE7"; fi
+	if [ -n "$NBTYPE8" ]; then INPUTTYPE="$INPUTTYPE,$NBTYPE8"; fi
+
+	INPUTTYPE=`echo $INPUTTYPE |sed 's/^,//g'`
+	INPUTNB=`echo $INPUTNB |sed 's/^,//g'`
+	PROBLEM=0
+
+	if [ -z "$INPUTTYPE" ]; then
+		export ERROR="Missing NB input types"
+		error
+		PROBLEM=1
+	fi
+	if [ -z "$INPUTNB" ]; then
+		export ERROR="Missing NB input files"
+		error
+		PROBLEM=1
+	fi
+
+	NBCOUNT=0
+	TYPECOUNT=0
+	for f in `echo $INPUTTYPE |sed 's/,/ /g'` ; do TYPECOUNT=$(($TYPECOUNT + 1)) ; done 
+	for f in `echo $INPUTNB |sed 's/,/ /g'` ; do NBCOUNT=$(($NBCOUNT + 1)) ; done 
+
+	if [ "$NBCOUNT" != "$TYPECOUNT" ]; then
+		export ERROR="NB files and NB types do not match"
+		error
+		PROBLEM=1
+	fi
+done
+
+export TMPF=/tmp/tmpfile.$$
+
+if [ "$EXIT" = "CREATENBH" ]; then
+	yang -F $NBH_SAVEFILENAME -s $CHUNKSIZE -c $CID -d $MODELID -v $NBHVERSION -l $LANGUAGE -f $INPUTNB -t $INPUTTYPE 2>&1 |tee $TMPF >/dev/null
+	RES=$?
+fi
+
+export yangINFO="
+<window title=\"YANG-$VERSION \">
+<hbox>
+<vbox>
+<frame result:>
+    <edit>
+      <variable>INFO</variable>
+      <input file>$TMPF</input>
+      <width>500</width>
+      <height>400</height>
+    </edit>
+</frame>
+<hbox>
+    <button>
+       <input file icon=\"gtk-ok\"></input>
+      <label>OK</label>
+      <action type=\"exit\">Exit-now</action>
+    </button>
+</hbox>
+</vbox>
+</hbox>
+</window>
+"
+RESULTS=`$GTKDIALOG --program=yangINFO --center`
+rm $TMPF
+
+exit $RES

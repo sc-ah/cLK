@@ -1,0 +1,30 @@
+=head1 NAME
+
+HTCFlasherGUI - Rom Update Utility (RUU) for HTC based devices
+
+=head1 SYNOPSIS
+
+HTCFlasherGUI
+
+=head1 DESCRIPTION
+
+HTCFlasherGUI is a GTK+ Graphical User Interface for HTCFlasher.
+It is written in bash, and heavily depends on zenity(1).
+
+=head1 AUTHOR
+
+Written by Pau Oliva Fora
+
+=head1 REPORTING BUGS
+
+Please report bugs here:
+http://code.google.com/p/htc-flasher/issues/list
+
+=head1 COPYRIGHT
+
+Copyright (c) 2008 Pau Oliva Fora.  License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
+
+=head1 SEE ALSO
+
+HTCFlasher(1), zenity(1)

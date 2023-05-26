@@ -38,7 +38,6 @@
 #include <compiler.h>
 #include <debug.h>
 #include <err.h>
-#include <hsusb.h>
 #include <platform.h>
 #include <reg.h>
 #include <smem.h>

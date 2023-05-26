@@ -695,6 +695,10 @@ void aboot_init(const struct app_descriptor *app)
 		goto boot_menu;
 	if (keys_get_state(KEY_VOLUMEDOWN) != 0)
 		display_init();
+	if (keys_get_state(KEY_VOLUMEUP) != 0){
+		boot_into_recovery = 0;
+		boot_into_uefi = 1;
+	}
 
 	#if NO_KEYPAD_DRIVER
 	/* With no keypad implementation, check the status of USB connection. */
@@ -718,7 +722,9 @@ void aboot_init(const struct app_descriptor *app)
 	}
 	else
 	{
+		if (boot_into_recovery == 1){
 		recovery_init();
+		}
 		boot_linux_from_flash();
 	}
 	dprintf(CRITICAL, "ERROR: Could not do normal boot. Reverting "
@@ -728,6 +734,7 @@ boot_menu:
 	display_init();
 	aboot_init_fastboot(usb_init);
 	init_ui();
+
 }
 
 APP_START(aboot)

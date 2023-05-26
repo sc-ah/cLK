@@ -1,0 +1,214 @@
+#!/bin/bash
+#
+#  Linux Rom Kitchen Build script
+#
+#  Copyright (C) 2007-2008 Pau Oliva Fora - <pof@eslack.org>
+#
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by the
+#  Free Software Foundation; either version 3 of the License, or (at your
+#  opinion) any later version. See <http://www.gnu.org/licenses/gpl.html>
+#
+
+TOOLS="/usr/share/LinuxRomKitchen/"
+CURRENTDIR=`pwd`
+
+if ! [ -f $HOME/.lrk/NBSPLITOPTS ]; then
+	echo "-kaiser" > $HOME/.lrk/NBSPLITOPTS
+fi
+NBSPLITOPTS=`cat ~/.lrk/NBSPLITOPTS`
+
+
+if [ -z $1 ]; then
+	echo "USAGE: lrk-build <os-new.nb>"
+	exit 1
+fi
+
+if [ -e $1 ]; then
+	echo "ERROR: $1 already exists, please delete it first"
+	exit 1
+fi
+
+## SYS, ROM & Packages folders must exist
+if ! [ -d SYS ]; then
+	echo "ERROR: SYS folder doesn't exist, run lrk-extract first"
+	exit 1
+fi
+
+if ! [ -d ROM ]; then
+	echo "ERROR: ROM folder doesn't exist, run lrk-extract first"
+	exit 1
+fi
+
+if ! [ -d Packages_Install ]; then
+	echo "Warning: Packages folder doesn't exist, creating an empty one"
+	echo "No custom packages will be added to this rom."
+	mkdir Packages_Install
+fi
+
+echo "$CURRENTDIR" |grep " " 1>/dev/null
+if [ $? != 1 ]; then
+	echo "ERROR: Sorry, the current work directory can't contain spaces: $CURRENTDIR"
+	exit 1
+fi
+
+echo "Preparing..."
+rm -rf ~/.lrk/Temp/ 2>/dev/null
+mkdir -p ~/.lrk/Temp/
+cd ~/.lrk/Temp
+
+#convert initflashfiles.dat to original format
+INFF=`find ${CURRENTDIR}/SYS/OEM* -iname "initflashfiles.dat"`
+chmod 644 $INFF
+if [ $? != 0 ]; then
+	echo "ERROR: Initflashfiles not found"
+	exit 1
+fi
+LEN=`cat $HOME/.lrk/initflashfiles.txt |wc -l`
+if [ $LEN -gt 1 ]; then
+	iconv -f iso-8859-15 -t utf16 $HOME/.lrk/initflashfiles.txt > $INFF
+	FLAG=`hexdump $INFF |head -n 1 |cut -f 2 -d " "`
+	size=`du -b $INFF |cut -f 1`
+	if [ "$FLAG" = "feff" ]; then
+		dd if=$INFF of=$INFF.tmp bs=1 skip=2 count=$(($size - 2))
+		mv $INFF.tmp $INFF
+	fi
+fi
+chmod 444 $INFF
+
+mkdir Packages
+cd Packages
+
+find "$CURRENTDIR/SYS/" -name "*.rgu" -exec cp {} . \; 2>/dev/null
+find "$CURRENTDIR/ROM/" -name "*.rgu" -exec cp {} . \; 2>/dev/null
+find "$CURRENTDIR/Packages_Install/" -name "*.rgu" -exec cp {} . \; 2>/dev/null
+
+find "$CURRENTDIR/SYS/" -name "*.dsm" -exec cp {} . \; 2>/dev/null
+find "$CURRENTDIR/ROM/" -name "*.dsm" -exec cp {} . \; 2>/dev/null
+find "$CURRENTDIR/Packages_Install/" -name "*.dsm" -exec cp {} . \; 2>/dev/null
+
+# rgucomp.exe needs cereg400.dll to mount the hives
+echo "Generating boot.hv..."
+export _FLATRELEASEDIR=.
+wine $TOOLS/rgucomp.exe -b
+mv boot.hv ..
+mv boot.rgu ..
+
+if [ $? != 0 ]; then
+	echo "ERROR: rgucomp failed. Make sure have installed .net CF 2.0 in wine"
+	echo "Hint:"
+	echo "   wget http://kegel.com/wine/winetricks"
+	echo "   sh winetricks corefonts dotnet20 vcrun2005"
+	echo
+	exit 1
+fi
+
+echo "Creating packages.cab.pkg..."
+lcab -n * ../packages.cab.pkg
+cd ..
+mv packages.cab.pkg Packages/
+
+if [ $? != 0 ]; then
+	echo "ERROR: Problem creating packages.cab.pkg"
+	exit 1
+fi
+
+# here we need to regenerate the packages.sof
+echo "Generating packages.sof"
+sofbuild Packages/
+wine $TOOLS/rgucomp.exe
+
+echo "Updating registry files..."
+# update the registry files
+wine $TOOLS/rgucomp.exe -nologo -o default.hv > ~/.lrk/reg/default.txt
+wine $TOOLS/rgucomp.exe -nologo -o boot.hv > ~/.lrk/reg/boot.txt
+wine $TOOLS/rgucomp.exe -nologo -o user.hv > ~/.lrk/reg/user.txt
+dos2unix ~/.lrk/reg/*
+dos2unix ~/.lrk/reg/*
+
+
+### we need to end up only with 1 "dump" folder in Temp
+echo "Generating dump folder..."
+mkdir dump
+cd dump
+cp -R $CURRENTDIR/ROM/XIP/* .
+for f in `/bin/ls "$CURRENTDIR/SYS/"` ; do
+	cp -R $CURRENTDIR/SYS/${f}/* .
+	#fix for Metadata/.hst
+	if [ $f = "Metadata" ]; then
+		cp $CURRENTDIR/SYS/${f}/.hst .
+	fi
+done
+
+# special
+mkdir .VM
+mkdir .ROM
+cp -R $CURRENTDIR/SYS/.VM/* .VM/
+cp -R $CURRENTDIR/SYS/.ROM/* .ROM/
+
+# same for custom packages, but folder names usually contain spaces...
+echo "Adding custom packages to dump folder..."
+LEN=`cat ~/.lrk/pkginst.txt |wc -l`
+if [ $LEN != 0 ]; then
+	for f in `seq 1 $LEN`; do
+		FOLDER=`cat ~/.lrk/pkginst.txt |head -n $f |tail -n 1`
+		cp -R "$CURRENTDIR/Packages_Install/$FOLDER/"* .
+	done
+fi
+
+rm -rf default.hv packages.sof user.hv
+
+if [ $? != 0 ]; then
+	echo "ERROR: Some problem occurred when creating the dump folder"
+	exit 1
+fi
+
+# return to Temp
+cd ..
+cp boot.hv boot.rgu default.hv packages.sof user.hv dump/
+if [ $? != 0 ]; then
+	echo "ERROR: Some problem occurred when creating the dump folder"
+	exit 1
+fi
+chmod 444 dump/default.hv dump/packages.sof dump/user.hv
+
+### createROM
+cd ..
+cd Temp
+
+cp "$CURRENTDIR/ROM/OS.nb" .
+if [ $? != 0 ]; then
+	echo "ERROR: OS.nb not found in ROM"
+	exit 1
+fi
+
+if [ $NBSPLITOPTS != "-athena" ]; then
+	nbsplit $NBSPLITOPTS ./OS.nb |tee log.dump
+	if [ $? != 0 ]; then
+		echo "ERROR: NBSplit failed, check that nbplit options are correct in kitchen preferences"
+		exit 1
+	fi
+else
+	cp ./OS.nb ./OS.nb.payload
+fi
+ImgfsFromNb OS.nb.payload imgfs.bin >> log.dump
+wine $TOOLS/ImgfsFromDump.exe imgfs.bin imgfs-new.bin >> log.dump
+wine $TOOLS/ImgfsToNb.exe imgfs-new.bin os.nb.payload os-new.nb.payload >> log.dump
+if [ $NBSPLITOPTS != "-athena" ]; then
+	wine $TOOLS/NBMerge.exe $NBSPLITOPTS os-new.nb >> log.dump
+else
+	cp ./os-new.nb.payload os-new.nb
+fi
+
+echo "Cleaning up..."
+mv os-new.nb "$CURRENTDIR/$1"
+if [ $? != 0 ]; then
+	echo "ERROR: Can't create $1"
+	exit 1
+fi
+cd "$CURRENTDIR"
+rm -rf ~/.lrk/Temp/ 2>/dev/null
+
+echo "$1 created successfully :)"
+
+echo "Done!"

@@ -1,0 +1,647 @@
+#!/bin/bash
+#
+#  Linux ROM Kitchen
+# 
+#  Copyright (C) 2007-2008 Pau Oliva Fora - <pof@eslack.org>
+#
+#  This program is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by the
+#  Free Software Foundation; either version 3 of the License, or (at your
+#  opinion) any later version. See <http://www.gnu.org/licenses/gpl.html>
+# 
+
+if ! [ -e /usr/share/LinuxRomKitchen/lrk-preload ]; then
+        echo "ERROR: Linux Rom Kitchen is not properly installed"
+        exit 1
+fi
+
+source /usr/share/LinuxRomKitchen/lrk-preload
+
+export ABOUT_DIALOG='<window title="LRK: about" window_position="2" icon_name="gtk-about" resizable="false">
+ <vbox>
+  <notebook labels="About|License|Credits">
+   <vbox>
+   <pixmap>
+     <input file>/usr/share/LinuxRomKitchen/lrk.svg</input>
+    </pixmap>
+    <text use_markup="true">
+     <label>"
+<b>Linux ROM Kitchen '$VERSION'</b>
+"</label>
+    </text>
+    <text>
+     <label>" Linux ROM kitchen for HTC Windows Mobile ROMs "</label>
+    </text>
+    <text>
+     <label>Copyright © 2008 Pau Oliva Fora</label>
+    </text>
+    <text>
+     <label>(pof @ XDA-Developers)</label>
+    </text>
+    <text><label>""</label></text>
+   </vbox>
+   <vbox>
+    <edit editable="false" cursor-visible="false">
+     <default>"
+  This program is free software; you can 
+  redistribute it and/or modify it under the
+  terms of the GNU General Public License as
+  published by the Free Software Foundation;
+  either version 3 of the License, or (at your
+  opinion) any later version. 
+
+  See http://www.gnu.org/licenses/gpl.html
+"</default>
+    </edit>
+   </vbox>
+   <vbox>
+    <edit editable="false" cursor-visible="false">
+     <default>"
+  Thanks to: arc, Asukal, bepe, cmonex, cr2,
+  ervius, esteve, itsme, jcespi2005, jockyw2001,
+  mamaich, Olipro, pancake, tadizio, vacula,
+  and all other XDA-Developers who I forget.
+"</default>
+    </edit>
+   </vbox>
+  </notebook>
+  <hbox>
+   <button>
+    <input file stock="gtk-close"></input>
+    <label>Close</label>
+    <action type="closewindow">ABOUT_DIALOG</action>
+   </button>
+  </hbox>
+ </vbox>
+</window>'
+
+export OPTIONS_DIALOG='
+<window title="Options" icon_name="gtk-preferences">
+ <vbox>
+   <text><label>nbsplit options:</label></text>
+      <entry>
+        <variable>NBSPLITOPTS</variable>
+        <input>cat $HOME/.lrk/NBSPLITOPTS</input>
+        <action>echo $NBSPLITOPTS |tee $HOME/.lrk/NBSPLITOPTS</action>
+        <action>refresh:NBSPLITOPTS</action>
+      </entry>
+   <vbox>
+    <edit editable="false" cursor-visible="false">
+      <width>350</width>
+      <height>100</height>
+     <default>"Possible values are:
+ -kaiser : Most new NAND devices use this (Eg: Kaiser, Shift, Diamond, etc...)
+ -hermes : Most old NAND devices use this (Eg: Hermes, Trinity, Cheetah, etc...)
+ -athena : Non-NAND devices use this (Eg: Athena, Wizard, etc...)
+"</default>
+    </edit>
+   </vbox>
+  <hbox>
+   <button>
+    <input file stock="gtk-close"></input>
+    <label>Close</label>
+    <action type="closewindow">OPTIONS_DIALOG</action>
+   </button>
+  </hbox>
+ </vbox>
+</window>
+'
+
+export LOADPRJ_DIALOG='
+<window title="LRK: Load Existing Project" icon_name="applications-system">
+ <vbox>
+  <chooser>
+   <height>500</height><width>600</width>
+   <variable>PRJ_FILE</variable>
+  </chooser>
+  <hbox>
+   <button>
+    <input file stock="gtk-cancel"></input>
+    <label>Cancel</label>
+    <action type="closewindow">LOADPRJ_DIALOG</action>
+   </button>
+   <button>
+    <input file stock="gtk-ok"></input>
+    <label>Load</label>
+    <action>/usr/share/LinuxRomKitchen/lrk-scripts -loadproject $PRJ_FILE |zenity --progress --auto-close --pulsate</action>
+    <action type="clear">FRAME_LOG</action>
+    <action type="refresh">FRAME_LOG</action>
+    <action type="clear">FRAME_SYSPACKAGES</action>
+    <action type="refresh">FRAME_SYSPACKAGES</action>
+    <action type="clear">FRAME_OEMPACKAGES</action>
+    <action type="refresh">FRAME_OEMPACKAGES</action>
+    <action type="clear">FRAME_ROMINFO</action>
+    <action type="refresh">FRAME_ROMINFO</action>
+    <action type="clear">FRAME_NB</action>
+    <action type="refresh">FRAME_NB</action>
+    <action type="clear">FRAME_NBH</action>
+    <action type="refresh">FRAME_NBH</action>
+    <action type="clear">FRAME_CUSTOMPACKAGES</action>
+    <action type="refresh">FRAME_CUSTOMPACKAGES</action>
+    <action type="clear">FRAME_INSTALLPACKAGES</action>
+    <action type="refresh">FRAME_INSTALLPACKAGES</action>
+    <action type="closewindow">LOADPRJ_DIALOG</action>
+   </button>
+  </hbox>
+ </vbox>
+</window>
+'
+
+
+export OS2PKG_DIALOG='
+<window title="LRK: Extract ROM Packages from OS.nb" icon_name="applications-system">
+ <vbox>
+  <chooser>
+   <height>500</height><width>600</width>
+   <variable>OSNB_FILE</variable>
+  </chooser>
+  <hbox>
+   <button>
+    <input file stock="gtk-cancel"></input>
+    <label>Cancel</label>
+    <action type="closewindow">OS2PKG_DIALOG</action>
+   </button>
+   <button>
+    <input file stock="gtk-ok"></input>
+    <label>Extract</label>
+    <action>/usr/share/LinuxRomKitchen/lrk-scripts -osnbextract $OSNB_FILE |zenity --progress --auto-close --pulsate</action>
+    <action type="clear">FRAME_LOG</action>
+    <action type="refresh">FRAME_LOG</action>
+    <action type="clear">FRAME_SYSPACKAGES</action>
+    <action type="refresh">FRAME_SYSPACKAGES</action>
+    <action type="clear">FRAME_OEMPACKAGES</action>
+    <action type="refresh">FRAME_OEMPACKAGES</action>
+    <action type="clear">FRAME_ROMINFO</action>
+    <action type="refresh">FRAME_ROMINFO</action>
+    <action type="closewindow">OS2PKG_DIALOG</action>
+   </button>
+  </hbox>
+ </vbox>
+</window>
+'
+
+export RAWOS2PKG_DIALOG='
+<window title="LRK: Extract ROM Packages from OS.nb" icon_name="applications-system">
+ <vbox>
+	<hbox>
+	   <text><label>Container OS.nb file:</label></text>
+	    <entry accept="filename">
+	      <variable>OSNB_FILE</variable>
+	    </entry>
+	    <button>
+	      <input file stock="gtk-file"></input>
+	      <action type="fileselect">OSNB_FILE</action>                      
+	    </button>
+	</hbox>
+
+	<hbox>
+	   <text><label>Dumped XIP (Part01.raw):</label></text>
+	    <entry accept="filename">
+	      <variable>PART1_FILE</variable>
+	    </entry>
+	    <button>
+	      <input file stock="gtk-file"></input>
+	      <action type="fileselect">PART1_FILE</action>                      
+	    </button>
+	</hbox>
+
+	<hbox>
+	   <text><label>Dumped OS (Part02.raw):</label></text>
+	    <entry accept="filename">
+	      <variable>PART2_FILE</variable>
+	    </entry>
+	    <button>
+	      <input file stock="gtk-file"></input>
+	      <action type="fileselect">PART2_FILE</action>                      
+	    </button>
+	</hbox>
+  <hbox>
+   <button>
+    <input file stock="gtk-cancel"></input>
+    <label>Cancel</label>
+    <action type="closewindow">OS2PKG_DIALOG</action>
+   </button>
+   <button>
+    <input file stock="gtk-ok"></input>
+    <label>Extract</label>
+    <action>/usr/share/LinuxRomKitchen/lrk-scripts -osnbextract $OSNB_FILE $PART1_FILE $PART2_FILE |zenity --progress --auto-close --pulsate</action>
+    <action type="clear">FRAME_LOG</action>
+    <action type="refresh">FRAME_LOG</action>
+    <action type="clear">FRAME_SYSPACKAGES</action>
+    <action type="refresh">FRAME_SYSPACKAGES</action>
+    <action type="clear">FRAME_OEMPACKAGES</action>
+    <action type="refresh">FRAME_OEMPACKAGES</action>
+    <action type="clear">FRAME_ROMINFO</action>
+    <action type="refresh">FRAME_ROMINFO</action>
+    <action type="closewindow">OS2PKG_DIALOG</action>
+   </button>
+  </hbox>
+ </vbox>
+</window>
+'
+
+
+
+export NBH2NB_DIALOG='
+<window title="LRK: Extract NB from NBH" icon_name="applications-system">
+ <vbox>
+  <chooser>
+   <height>500</height><width>600</width>
+   <variable>NBH_FILE</variable>
+  </chooser>
+  <hbox>
+   <button>
+    <input file stock="gtk-cancel"></input>
+    <label>Cancel</label>
+    <action type="closewindow">NBH2NB_DIALOG</action>
+   </button>
+   <button>
+    <input file stock="gtk-ok"></input>
+    <label>Extract</label>
+    <action>/usr/share/LinuxRomKitchen/lrk-scripts -nbhextract $NBH_FILE |zenity --progress --auto-close --pulsate</action>
+    <action type="clear">FRAME_LOG</action>
+    <action type="refresh">FRAME_LOG</action>
+    <action type="clear">FRAME_NB</action>
+    <action type="refresh">FRAME_NB</action>
+    <action type="closewindow">NBH2NB_DIALOG</action>
+   </button>
+  </hbox>
+ </vbox>
+</window>
+'
+
+export EXE2NBH_DIALOG='
+<window title="LRK: Extract NBH from Shipped EXE" icon_name="applications-system">
+ <vbox>
+  <chooser>
+   <height>500</height><width>600</width>
+   <variable>EXE_FILE</variable>
+  </chooser>
+  <hbox>
+   <button>
+    <input file stock="gtk-cancel"></input>
+    <label>Cancel</label>
+    <action type="closewindow">EXE2NBH_DIALOG</action>
+   </button>
+   <button>
+    <input file stock="gtk-ok"></input>
+    <label>Extract</label>
+    <action>/usr/share/LinuxRomKitchen/lrk-scripts -cabextract $EXE_FILE |zenity --progress --auto-close --pulsate</action>
+    <action type="clear">FRAME_LOG</action>
+    <action type="refresh">FRAME_LOG</action>
+    <action type="clear">FRAME_NBH</action>
+    <action type="refresh">FRAME_NBH</action>
+    <action type="closewindow">EXE2NBH_DIALOG</action>
+   </button>
+  </hbox>
+ </vbox>
+</window>
+'
+
+
+export LRK_IFFSEDITOR='
+<window title="LRK: Initflashfiles Editor" icon_name="applications-system">
+<vbox>
+    <edit>
+      <variable>IFFEDITOR</variable>
+      <width>650</width>
+      <height>500</height>
+	<input file>'$HOME/.lrk/initflashfiles.txt'</input>
+	<output file>'$HOME/.lrk/initflashfiles.txt'</output>
+    </edit>
+    <hbox>
+      <button>
+       <input file stock="gtk-close"></input>
+       <label>Close</label>
+       <action type="closewindow">LRK_IFFSEDITOR</action>
+      </button>
+      <button>
+       <input file stock="gtk-save"></input>
+       <label>Save</label>
+       <action type="save">IFFEDITOR</action>
+      </button>
+      <button>
+        <input file stock="gtk-undo"></input>
+        <label>Undo</label>
+        <action type="clear">IFFEDITOR</action>
+        <action type="refresh">IFFEDITOR</action>
+      </button>
+    </hbox>
+</vbox>
+</window>
+'
+
+
+export LRK_REGEDITOR='
+<window title="LRK: Registry Viewer" icon_name="applications-system">
+<vbox>
+  <notebook labels="Default|User|Boot">
+
+<vbox>
+    <edit editable="false">
+      <variable>REGISTRY_DEFAULT</variable>
+      <width>650</width>
+      <height>500</height>
+	<input file>'$HOME/.lrk/reg/default.txt'</input>
+    </edit>
+    <hbox>
+      <button>
+       <input file stock="gtk-close"></input>
+       <label>Close</label>
+       <action type="closewindow">LRK_REGEDITOR</action>
+      </button>
+    </hbox>
+</vbox>
+
+<vbox>
+    <edit editable="false">
+      <variable>REGISTRY_USER</variable>
+      <width>650</width>
+      <height>500</height>
+	<input file>'$HOME/.lrk/reg/user.txt'</input>
+    </edit>
+    <hbox>
+      <button>
+       <input file stock="gtk-close"></input>
+       <label>Close</label>
+       <action type="closewindow">LRK_REGEDITOR</action>
+      </button>
+    </hbox>
+</vbox>
+
+<vbox>
+    <edit editable="false">
+      <variable>REGISTRY_BOOT</variable>
+      <width>650</width>
+      <height>500</height>
+	<input file>'$HOME/.lrk/reg/boot.txt'</input>
+    </edit>
+    <hbox>
+      <button>
+       <input file stock="gtk-close"></input>
+       <label>Close</label>
+       <action type="closewindow">LRK_REGEDITOR</action>
+      </button>
+    </hbox>
+</vbox>
+
+</notebook>
+</vbox>
+</window>
+'
+
+export LRK_MAIN='
+<window title="Linux ROM Kitchen '$VERSION'" icon_name="applications-system">
+<vbox>
+  <menubar>
+
+    <menu>
+      <menuitem icon="gtk-new">
+        <label>New Project</label>
+	<action>/usr/share/LinuxRomKitchen/lrk-scripts -newproject |zenity --progress --auto-close --pulsate</action>
+    <action type="clear">FRAME_LOG</action>
+    <action type="refresh">FRAME_LOG</action>
+    <action type="clear">EXE2NBH_DIALOG</action>
+    <action type="clear">FRAME_NBH</action>
+    <action type="clear">FRAME_NB</action>
+    <action type="clear">FRAME_ROMINFO</action>
+    <action type="clear">FRAME_SYSPACKAGES</action>
+    <action type="clear">FRAME_OEMPACKAGES</action>
+    <action type="clear">FRAME_INSTALLPACKAGES</action>
+      </menuitem>
+      <menuitem icon="gtk-open">
+        <label>Load Existing Project</label>
+	    <action type="launch">LOADPRJ_DIALOG</action>
+      </menuitem>
+      <menuitem icon="gtk-save">
+        <label>Backup Current Project</label>
+	<action>/usr/share/LinuxRomKitchen/lrk-scripts -saveproject |zenity --progress --auto-close --pulsate</action>
+        <action type="clear">FRAME_LOG</action>
+        <action type="refresh">FRAME_LOG</action>
+      </menuitem>
+      <menuitem icon="gtk-preferences">
+        <label>Preferences</label>
+            <action type="launch">OPTIONS_DIALOG</action>
+      </menuitem>
+      <menuitem icon="gtk-quit">
+        <label>Exit</label>
+            <action type="exit">=quit</action>
+      </menuitem>
+      <label>File</label>
+    </menu>
+
+    <menu>
+       <menuitem icon="application-x-executable">
+            <label>NBH from Shipped EXE</label>
+	    <action type="launch">EXE2NBH_DIALOG</action>
+      </menuitem> 
+      <menuitem icon="gtk-leave-fullscreen">
+            <label>ROM contents (*.nb) from NBH</label>
+	    <action type="launch">NBH2NB_DIALOG</action>
+      </menuitem> 
+      <menuitem icon="insert-object">
+            <label>ROM packages from OS.nb</label>
+	    <action type="launch">OS2PKG_DIALOG</action>
+      </menuitem>
+      <menuitem icon="stock_fullscreen">
+            <label>ROM packages from Dumped OS</label>
+	    <action type="launch">RAWOS2PKG_DIALOG</action>
+      </menuitem>   
+      <label>Extract</label>
+    </menu>
+
+    <menu>
+      <menuitem icon="gtk-edit">
+        <label>Edit Initflashfiles</label>
+        <action type="launch">LRK_IFFSEDITOR</action>
+      </menuitem>
+      <menuitem icon="gtk-execute">
+        <label>Registry Viewer</label>
+        <action type="launch">LRK_REGEDITOR</action>
+      </menuitem>
+      <menuitem icon="stock_right">
+        <label>Convert SYS+ROM+Packages to OS.nb</label>
+            <action>/usr/share/LinuxRomKitchen/lrk-scripts -osnbbuild |zenity --progress --auto-close --pulsate</action>
+            <action type="clear">FRAME_LOG</action>
+            <action type="refresh">FRAME_LOG</action>
+      </menuitem>
+      <label>Cook</label>
+    </menu>    
+
+    <menu>
+      <menuitem icon="applications-development">
+        <label>Generate NBH</label>
+        <action>yangGUI &</action>
+      </menuitem>
+      <menuitem icon="pda">
+        <label>Flash your ROM</label>
+        <action>HTCFlasherGUI &</action>
+      </menuitem>
+      <label>Tools</label>
+    </menu>    
+
+    <menu>
+      <menuitem icon="gtk-about">
+        <label>About</label>
+            <action type="launch">ABOUT_DIALOG</action>
+      </menuitem>
+      <label>Info</label>
+    </menu>
+
+  </menubar>
+
+
+
+
+
+
+  <notebook labels="ROM Layout|ROM Packages|Custom Packages|Log">
+
+
+ <hbox>
+   <hbox>
+     <frame ROM Info:>
+     <vbox>
+      <edit editable="false" cursor-visible="false">
+         <input file>'$HOME/.lrk/rominfo.txt'</input>
+         <variable>FRAME_ROMINFO</variable>
+         <height>400</height>
+         <width>500</width>
+       </edit>
+     </vbox>
+       <hbox>
+         <button>
+           <input file stock="gtk-refresh"></input>
+           <label>Refresh</label>
+           <action type="clear">FRAME_ROMINFO</action>
+           <action type="refresh">FRAME_ROMINFO</action>
+           <action type="clear">FRAME_NBH</action>
+           <action type="refresh">FRAME_NBH</action>
+           <action type="clear">FRAME_NB</action>
+           <action type="refresh">FRAME_NB</action>
+         </button>
+       </hbox>
+     </frame>
+   </hbox>
+   <vbox>
+       <frame NBH Files:>
+         <table>
+           <variable>FRAME_NBH</variable>
+           <input>ls ~/LRK/NBH/ |grep -i \.nbh$</input>
+         </table>
+       </frame>
+
+       <frame NBH Contents:>
+         <table>
+           <variable>FRAME_NB</variable>
+           <input>ls ~/LRK/NBH/ |grep -i \.nb$</input>
+         </table>
+       </frame>
+    </vbox>
+ </hbox>
+
+
+
+  <vbox>
+     <vbox>
+       <frame SYS Packages:>
+         <table>
+           <input>/bin/ls $HOME/LRK/SYS/ |grep -v ^OEM</input>
+           <variable>FRAME_SYSPACKAGES</variable>
+           <height>260</height>
+           <width>720</width>
+         </table>
+       </frame>            
+
+       <frame OEM Packages:>
+         <table>
+           <input>/bin/ls ~/LRK/SYS/ |grep ^OEM</input>
+           <variable>FRAME_OEMPACKAGES</variable>
+         </table>
+       </frame> 
+       <hbox>
+         <button>
+           <input file stock="gtk-refresh"></input>
+           <label>Refresh</label>
+           <action type="clear">FRAME_SYSPACKAGES</action>
+           <action type="refresh">FRAME_SYSPACKAGES</action>
+           <action type="clear">FRAME_OEMPACKAGES</action>
+           <action type="refresh">FRAME_OEMPACKAGES</action>
+         </button>
+       </hbox>
+     </vbox>
+  </vbox>
+
+<vbox>
+  <hbox>
+       <frame Available Packages:>
+         <table>
+           <input>ls ~/LRK/Packages/</input>
+           <variable>FRAME_CUSTOMPACKAGES</variable>
+         <height>400</height>
+         <width>250</width>
+         </table>
+       </frame>
+
+       <frame Selected Packages:>
+         <table>
+           <input>cat ~/.lrk/pkginst.txt</input>
+           <variable>FRAME_INSTALLPACKAGES</variable>
+         </table>
+       </frame>
+  </hbox>
+  <hbox>
+           <button>
+             <input file stock="gtk-add"></input>
+             <label>Add packages</label>
+             <action>/usr/share/LinuxRomKitchen/lrk-scripts -packages</action>
+             <action type="clear">FRAME_LOG</action>
+             <action type="refresh">FRAME_LOG</action>
+             <action type="clear">FRAME_CUSTOMPACKAGES</action>
+             <action type="refresh">FRAME_CUSTOMPACKAGES</action>
+             <action type="clear">FRAME_INSTALLPACKAGES</action>
+             <action type="refresh">FRAME_INSTALLPACKAGES</action>
+           </button>
+           <button>
+             <input file stock="gtk-refresh"></input>
+             <label>Refresh</label>
+             <action type="clear">FRAME_CUSTOMPACKAGES</action>
+             <action type="refresh">FRAME_CUSTOMPACKAGES</action>
+             <action type="clear">FRAME_INSTALLPACKAGES</action>
+             <action type="refresh">FRAME_INSTALLPACKAGES</action>
+           </button>
+  </hbox>
+</vbox>
+
+  <vbox>
+    <edit editable="false" cursor-visible="false">
+    <input file>'$HOME/.lrk/lrk.log'</input>
+       <variable>FRAME_LOG</variable>
+       <height>360</height>
+       <width>700</width>
+     </edit>
+     <hbox>
+       <button>
+         <input file stock="gtk-clear"></input>
+         <label>CLEAR</label>
+         <action type="clear">FRAME_LOG</action>
+       </button>
+       <button>
+         <input file stock="gtk-refresh"></input>
+         <label>Refresh</label>
+         <action type="clear">FRAME_LOG</action>
+         <action type="refresh">FRAME_LOG</action>
+       </button>
+     </hbox>
+  </vbox>
+
+</notebook>
+
+
+</vbox>
+<action signal="delete-event" type="exit">=quit</action>
+</window>
+'
+
+
+RESULT=`$GTKDIALOG --program=LRK_MAIN --center`

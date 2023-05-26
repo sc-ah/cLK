@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Linux ROM Kitchen
+Comment=Linux ROM kitchen for HTC Windows Mobile based devices
+Exec=/usr/bin/lrk
+Icon=/usr/share/LinuxRomKitchen/lrk.svg
+Terminal=false
+Type=Application
+Categories=Utility;Application;

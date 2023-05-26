@@ -35,7 +35,7 @@
 #include <menu_keys_detect.h>
 #include <string.h>
 #include <platform.h>
-#include <smem.h>
+#include "smem.h"
 #include <target.h>
 #include <sys/types.h>
 #include <../../../app/aboot/recovery.h>
